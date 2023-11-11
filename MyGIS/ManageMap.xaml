@@ -1,0 +1,31 @@
+﻿<Page
+    x:Class="MyGIS.ManageMap"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:esri="http://schemas.esri.com/arcgis/runtime/2013"
+    xmlns:local="clr-namespace:MyGIS"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="ManageMap"
+    Width="900"
+    Height="800"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <local:MapViewModel x:Key="MapViewModel" />
+    </Page.Resources>
+
+    <Grid>
+
+        <Grid>
+            <Frame BorderBrush="LightSlateGray" BorderThickness="4" />
+            <esri:MapView
+                x:Name="MainMapView"
+                GraphicsOverlays="{Binding GraphicsOverlays, Source={StaticResource MapViewModel}}"
+                Map="{Binding Map, Source={StaticResource MapViewModel}}" />
+        </Grid>
+
+    </Grid>
+
+
+</Page>
