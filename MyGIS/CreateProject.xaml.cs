@@ -4,18 +4,15 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using Windows.Graphics.Imaging;
 
 namespace MyGIS
@@ -26,6 +23,8 @@ namespace MyGIS
     public partial class CreateProject : Window
     {
         public string ImageFileName { get; set; }
+
+        public byte[] ResizedImageBytes { get; set; }
 
         public byte[] ImageBytes { get; set; }
 
@@ -50,7 +49,7 @@ namespace MyGIS
             {
                 string command = "insert into ProjectInformations (`Name`, `DateOfCreation`, `DateOfLastEdit`) values (@nameProject, @DateOfCreation, @DateOfLastCreation); SELECT idProject FROM ProjectInformations WHERE Name=@nameProject;";
 
-                string command1 = "insert into ProjectImages values (@id, @Image, @fileName, @offset);";
+                string command1 = "insert into ProjectImages values (@id, @Image, @fileName, @offset, @ResizedImage);";
 
                 MySqlParameter parameter1 = new MySqlParameter("@nameProject", MySqlDbType.VarChar);
                 parameter1.Value = NameProject.Text;
@@ -101,12 +100,16 @@ namespace MyGIS
                     MySqlParameter parameter4 = new MySqlParameter("@offset", MySqlDbType.Int32);
                     parameter4.Value = ImageBytes.Length;
 
+                    MySqlParameter parameter5 = new MySqlParameter("@ResizedImage", MySqlDbType.Blob);
+                    parameter5.Value = ResizedImageBytes;
+
                     parameters = new List<MySqlParameter>()
                     {
                         parameter1,
                         parameter2,
                         parameter3,
-                        parameter4
+                        parameter4,
+                        parameter5
                     };
                     MySqlDataReader res = null;
                     try
@@ -154,6 +157,34 @@ namespace MyGIS
             ImageFileName = openFileDialog.FileName;
 
             ImageBytes = File.ReadAllBytes(ImageFileName);
+
+            int newWidth = 140,
+                newHeight = 140;
+
+            ResizedImageBytes = new ImageConverter()
+                .ConvertTo(ResizeImage(ImageBytes, newWidth, newHeight), typeof(byte[])) as byte[];
+        }
+
+        static Image ResizeImage(byte[] byteArray, int newWidth, int newHeight)
+        {
+            using (MemoryStream stream = new MemoryStream(byteArray))
+            {
+                Image originalImage = Image.FromStream(stream);
+                Image resizedImage = new Bitmap(newWidth, newHeight);
+
+                using (Graphics g = Graphics.FromImage(resizedImage))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(originalImage, 0, 0, newWidth, newHeight);
+                }
+
+                return resizedImage;
+            }
+        }
+
+        private void DataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
         }
     }
 }

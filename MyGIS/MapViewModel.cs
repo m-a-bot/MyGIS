@@ -11,6 +11,10 @@ using Esri.ArcGISRuntime.Symbology;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Esri.ArcGISRuntime.Geometry;
+using Esri.ArcGISRuntime.Portal;
+using Esri.ArcGISRuntime.Rasters;
+using System.Windows.Input;
+using System.Windows;
 
 namespace MyGIS
 {
@@ -23,11 +27,45 @@ namespace MyGIS
             CreateGraphics();
         }
 
-        private void SetupMap()
+        private RelayCommand addMapImage;
+
+        public RelayCommand AddMapImage
         {
-            this.Map = new Map(BasemapStyle.OSMStandard);
+            get
+            {
+                return addMapImage ?? (
+                 addMapImage = new RelayCommand(
+                     (obj) =>
+                     {
+                         byte[] image = obj as byte[];
+
+                         if (image != null) 
+                         {
+                             //var rTimeImage = new RuntimeImage(image);
+
+                             //new ImageFrame(rTimeImage, )
+
+                             //Map.OperationalLayers.Clear();
+                         }
+                     }
+                  )
+                ); 
+            }
         }
 
+
+        private void SetupMap()
+        {
+
+            
+
+            this.Map = new Map();
+        }
+
+        private void Create()
+        {
+            //new RuntimeImage(byte[]);
+        }
 
         private void CreateGraphics()
         {
@@ -95,5 +133,6 @@ namespace MyGIS
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
     }
 }

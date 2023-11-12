@@ -17,6 +17,13 @@
 
     <Grid>
 
+        <Button
+            Width="100"
+            Height="50"
+            Panel.ZIndex="1"
+            Command="{Binding TestCommand, Source={StaticResource MapViewModel}}"
+            Content="Нажми" />
+
         <Grid>
             <Frame BorderBrush="LightSlateGray" BorderThickness="4" />
             <esri:MapView

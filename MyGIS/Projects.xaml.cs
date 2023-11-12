@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using MySqlConnector;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,6 +14,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
@@ -24,8 +26,18 @@ namespace MyGIS
     /// Логика взаимодействия для Projects.xaml
     /// </summary>
 
-    class InfoProject
-    { 
+    public class InfoProject
+    {
+
+        public InfoProject(int idProject, string name)
+        {
+            IdProject = idProject;
+            Name = name;
+        }
+
+        public int IdProject { get; set; }
+        public string Name { get; set; }
+  
     }
 
 
@@ -40,7 +52,9 @@ namespace MyGIS
 
         private async void Page_Initialized(object sender, EventArgs e)
         {
-            string command = "SELECT info.idProject, info.Name, info.DateOfCreation, info.DateOfLastEdit, image.dataOffSet, image.ProjectImage FROM ProjectInformations as info join ProjectImages as image on info.idProject = image.idProject;";
+            infoProjects.Clear();
+
+            string command = "SELECT info.idProject, info.Name, info.DateOfCreation, info.DateOfLastEdit, image.dataOffSet, image.ProjectResizedImage FROM ProjectInformations as info join ProjectImages as image on info.idProject = image.idProject;";
             ProjectPanel.Children.Clear();
 
             await DbManager.OpenConnection();
@@ -63,15 +77,14 @@ namespace MyGIS
                 reader.GetBytes(5, 0, buffer, 0, dataOffSet);
 
 
-                var imageSource = new BitmapImage { CacheOption = BitmapCacheOption.OnLoad };
-                using (MemoryStream memoryStream = new MemoryStream(buffer, 0, dataOffSet))
-                {
-                    imageSource.BeginInit();
-                    imageSource.StreamSource = memoryStream;
-                    imageSource.EndInit();
-                }
+                var imageSource = ByteArrayToImageSource(buffer);
 
-                ProjectPanel.Children.Add(CreateItemOfProjects(name, dateOfCreation, dateOfLastEdit, imageSource));
+                var info = new InfoProject(id, name);
+
+                infoProjects.Add(info);
+
+                ProjectPanel.Children.Add(
+                    CreateItemOfProjects(name, dateOfCreation, dateOfLastEdit, imageSource, id.ToString()));
             }
             
 
@@ -79,26 +92,47 @@ namespace MyGIS
 
             await DbManager.CloseConnection();
 
+            Log.Information("Projects loaded");
         }
 
-        private Grid CreateItemOfProjects(string name, DateTime dateOfCreation, DateTime dateOfLastEdit, BitmapImage image)
+        private Grid CreateItemOfProjects(string name, DateTime dateOfCreation, DateTime dateOfLastEdit, ImageSource image, string id)
         {
             Grid mainGrid = new Grid();
             mainGrid.Width = 140;
-            mainGrid.Height = 210;
+            mainGrid.Height = 240;
+            mainGrid.Uid = id;
             mainGrid.Margin = new Thickness(5);
+            mainGrid.MouseLeave += MainGrid_MouseLeave;
+            mainGrid.MouseEnter += MainGrid_MouseEnter;
             mainGrid.MouseDown += Grid_MouseDown;
 
-            System.Windows.Controls.Image map = new System.Windows.Controls.Image();
-            map.Width = 140;
-            map.Height = 140;
-            map.VerticalAlignment = VerticalAlignment.Top;
-            map.Source = image;
+            Grid icon = new Grid()
+            {
+                Width = 140,
+                Height = 140,
+                VerticalAlignment = VerticalAlignment.Top,
+                Background = new ImageBrush(image)
+            };
+
+
+            Label labelOpenProject = new Label()
+            {
+                Name = "OpenText",
+                Visibility = Visibility.Hidden,
+                Width=60,
+                Height=25,
+                Margin = new Thickness(0, 0, 0, -42),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Content = "Открыть",
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 255, 255, 255)),
+                FontSize = 12
+        };
+            
 
             Random random = new Random();
 
             Grid grid = new Grid();
-            grid.Height = 90;
+            grid.Height = 100;
 
             Frame MFrame = new Frame();
             MFrame.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(
@@ -130,11 +164,58 @@ namespace MyGIS
             grid.Children.Add(stackPanel);
 
             mainGrid.Children.Add(MFrame);
-
+            mainGrid.Children.Add(labelOpenProject);
             mainGrid.Children.Add(grid);
-            mainGrid.Children.Add(map);
+            mainGrid.Children.Add(icon);
 
             return mainGrid;
+        }
+
+        private void MainGrid_MouseLeave(object sender, MouseEventArgs e)
+        {
+            Grid? grid = sender as Grid;
+
+            if (grid is null)
+                return;
+
+            grid.Height = 240;
+
+            DoubleAnimation gridAnimation = new DoubleAnimation();
+            gridAnimation.From = grid.ActualHeight;
+            gridAnimation.To = 240;
+            gridAnimation.Duration = TimeSpan.FromSeconds(0.1);
+            grid.BeginAnimation(Grid.HeightProperty, gridAnimation);
+
+            
+            var label = grid.Children[1] as Label;
+
+            if (label is null)
+                return;
+
+            label.Visibility = Visibility.Hidden;
+
+        }
+
+        private void MainGrid_MouseEnter(object sender, MouseEventArgs e)
+        {
+            Grid? grid = sender as Grid;
+
+            if (grid is null)
+                return;
+
+            DoubleAnimation gridAnimation = new DoubleAnimation();
+            gridAnimation.From = grid.ActualHeight;
+            gridAnimation.To = 270;
+            gridAnimation.Duration = TimeSpan.FromSeconds(1);
+            grid.BeginAnimation(Grid.HeightProperty, gridAnimation);
+
+            var label = grid.Children[1] as Label;
+
+            if (label is null)
+                return;
+
+            label.Visibility = Visibility.Visible;
+            label.VerticalAlignment = VerticalAlignment.Center;
         }
 
         private void BtnOpenCreationWindow_Click(object sender, RoutedEventArgs e)
@@ -146,12 +227,40 @@ namespace MyGIS
 
         private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            
+            Grid? grid = sender as Grid;
+
+            if (grid is null)
+                return;
+
+            var id = int.Parse(grid.Uid);
+
+            var info = infoProjects.Find((e) => e.IdProject == id);
+
+            if (info is null)
+                return;
+
+            var page = new ManageMap(info);
+
+            this.NavigationService.Navigate(page);
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Page_Initialized(sender, e);
+        }
+
+        static ImageSource ByteArrayToImageSource(byte[] byteArray)
+        {
+            BitmapImage bitmapImage = new BitmapImage();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = new MemoryStream(byteArray);
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
+
+            // Убедитесь, что вызвано данное свойство, чтобы избежать проблем с потоком памяти
+            bitmapImage.Freeze();
+
+            return bitmapImage;
         }
     }
 }

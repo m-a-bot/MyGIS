@@ -22,12 +22,16 @@ namespace MyGIS
     /// </summary>
     public partial class ManageMap : Page
     {
-        public ManageMap()
+        InfoProject _info;
+        public ManageMap(InfoProject info)
         {
             InitializeComponent();
 
+            _info = info;
+
             MapPoint mapCenterPoint = new MapPoint(49.106815, 55.797930, SpatialReferences.Wgs84);
             MainMapView.SetViewpoint(new Viewpoint(mapCenterPoint, 100000));
+
         }
     }
 }
