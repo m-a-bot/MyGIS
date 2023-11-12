@@ -3,6 +3,7 @@ using MySqlConnector;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data.SqlTypes;
 using System.Drawing;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using Windows.Graphics.Imaging;
 
 namespace MyGIS
@@ -20,6 +22,17 @@ namespace MyGIS
     /// <summary>
     /// Логика взаимодействия для CreateProject.xaml
     /// </summary>
+
+    public class PointsMapBinding
+    {
+        public int PixelX { get; set; } = 0;
+        public int PixelY { get; set; } = 0;
+        public double GeoX { get; set; } = 0;
+        public double GeoY { get; set; } = 0;
+        public string Description { get; set; } = string.Empty;
+    }
+
+
     public partial class CreateProject : Window
     {
         public string ImageFileName { get; set; }
@@ -28,13 +41,33 @@ namespace MyGIS
 
         public byte[] ImageBytes { get; set; }
 
+        public ObservableCollection<PointsMapBinding> MyData;
+
+        private bool imageChoice = false;
+
         public CreateProject()
         {
             InitializeComponent();
+
+            MyData = new ObservableCollection<PointsMapBinding>()
+            {
+                new PointsMapBinding() { Description="Верхний левый угол"},
+                new PointsMapBinding() { Description="Верхний правый угол"},
+                new PointsMapBinding() { Description="Нижний правый угол"},
+                new PointsMapBinding() { Description="Нижний левый угол"}
+            };
+
+            pointsBinding.ItemsSource = MyData;
         }
 
         private async void SendInfoProjectToDb(object sender, EventArgs e)
         {
+            if (NameProject.Text == string.Empty)
+                return;
+
+            if (!imageChoice)
+                return;
+
             var connection = DbManager.Connection;
 
             await DbManager.OpenConnection();
@@ -154,35 +187,43 @@ namespace MyGIS
             if (!openFileDialog.ShowDialog().GetValueOrDefault())
                 return;
 
+            imageChoice = true;
+
             ImageFileName = openFileDialog.FileName;
 
+            PathToImage.Content = ImageFileName;
+
             ImageBytes = File.ReadAllBytes(ImageFileName);
+
+            ImageSource source = ImageTools.ByteArrayToImageSource(ImageBytes);
+
+            MapView.Background = new ImageBrush(source);
 
             int newWidth = 140,
                 newHeight = 140;
 
             ResizedImageBytes = new ImageConverter()
-                .ConvertTo(ResizeImage(ImageBytes, newWidth, newHeight), typeof(byte[])) as byte[];
+                .ConvertTo(ImageTools.ResizeImage(ImageBytes, newWidth, newHeight), typeof(byte[])) as byte[];
         }
 
-        static Image ResizeImage(byte[] byteArray, int newWidth, int newHeight)
-        {
-            using (MemoryStream stream = new MemoryStream(byteArray))
-            {
-                Image originalImage = Image.FromStream(stream);
-                Image resizedImage = new Bitmap(newWidth, newHeight);
-
-                using (Graphics g = Graphics.FromImage(resizedImage))
-                {
-                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(originalImage, 0, 0, newWidth, newHeight);
-                }
-
-                return resizedImage;
-            }
-        }
+        
 
         private void DataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
+        }
+
+        private void image_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void image_MouseMove(object sender, MouseEventArgs e)
+        {
+
+        }
+
+        private void image_MouseDown(object sender, MouseButtonEventArgs e)
         {
 
         }

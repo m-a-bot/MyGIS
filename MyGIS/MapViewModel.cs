@@ -29,6 +29,7 @@ namespace MyGIS
 
         private RelayCommand addMapImage;
 
+        // add points of binding
         public RelayCommand AddMapImage
         {
             get
@@ -56,10 +57,7 @@ namespace MyGIS
 
         private void SetupMap()
         {
-
-            
-
-            this.Map = new Map();
+            this.Map = new Map(BasemapStyle.ArcGISColoredPencil);
         }
 
         private void Create()

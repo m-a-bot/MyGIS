@@ -77,7 +77,7 @@ namespace MyGIS
                 reader.GetBytes(5, 0, buffer, 0, dataOffSet);
 
 
-                var imageSource = ByteArrayToImageSource(buffer);
+                var imageSource = ImageTools.ByteArrayToImageSource(buffer);
 
                 var info = new InfoProject(id, name);
 
@@ -249,18 +249,6 @@ namespace MyGIS
             Page_Initialized(sender, e);
         }
 
-        static ImageSource ByteArrayToImageSource(byte[] byteArray)
-        {
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = new MemoryStream(byteArray);
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-
-            // Убедитесь, что вызвано данное свойство, чтобы избежать проблем с потоком памяти
-            bitmapImage.Freeze();
-
-            return bitmapImage;
-        }
+       
     }
 }

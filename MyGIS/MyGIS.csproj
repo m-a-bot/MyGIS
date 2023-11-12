@@ -28,4 +28,11 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="images/bottom_left.png" />
+    <Resource Include="images/bottom_right.png" />
+    <Resource Include="images/top_left.png" />
+    <Resource Include="images/top_right.png" />
+  </ItemGroup>
+
 </Project>
