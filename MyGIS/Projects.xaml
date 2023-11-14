@@ -40,7 +40,6 @@
                 Content="Create new project" />
 
             <Button
-                
                 Width="70"
                 Height="45"
                 Margin="0,0,20,0"

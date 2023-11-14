@@ -8,11 +8,15 @@ using System.Data.SqlTypes;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
+using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using Windows.Graphics.Imaging;
@@ -23,10 +27,11 @@ namespace MyGIS
     /// Логика взаимодействия для CreateProject.xaml
     /// </summary>
 
+    [Serializable]
     public class PointsMapBinding
     {
-        public int PixelX { get; set; } = 0;
-        public int PixelY { get; set; } = 0;
+        public double PixelX { get; set; } = 0;
+        public double PixelY { get; set; } = 0;
         public double GeoX { get; set; } = 0;
         public double GeoY { get; set; } = 0;
         public string Description { get; set; } = string.Empty;
@@ -63,10 +68,16 @@ namespace MyGIS
         private async void SendInfoProjectToDb(object sender, EventArgs e)
         {
             if (NameProject.Text == string.Empty)
+            {
+                MessageBox.Show("Нет названия");
                 return;
+            }
 
             if (!imageChoice)
+            {
+                MessageBox.Show("Не выбрана карта");
                 return;
+            }
 
             var connection = DbManager.Connection;
 
@@ -77,12 +88,14 @@ namespace MyGIS
             Log.Information("Start transaction");
 
             var added = false;
+
+            string jsonStringMyData = JsonSerializer.Serialize(MyData);
             
             try
             {
                 string command = "insert into ProjectInformations (`Name`, `DateOfCreation`, `DateOfLastEdit`) values (@nameProject, @DateOfCreation, @DateOfLastCreation); SELECT idProject FROM ProjectInformations WHERE Name=@nameProject;";
 
-                string command1 = "insert into ProjectImages values (@id, @Image, @fileName, @offset, @ResizedImage);";
+                string command1 = "insert into ProjectImages values (@id, @Image, @fileName, @offset, @ResizedImage, @pointsBinding);";
 
                 MySqlParameter parameter1 = new MySqlParameter("@nameProject", MySqlDbType.VarChar);
                 parameter1.Value = NameProject.Text;
@@ -136,13 +149,17 @@ namespace MyGIS
                     MySqlParameter parameter5 = new MySqlParameter("@ResizedImage", MySqlDbType.Blob);
                     parameter5.Value = ResizedImageBytes;
 
+                    MySqlParameter parameter6 = new MySqlParameter("@pointsBinding", MySqlDbType.VarChar);
+                    parameter6.Value = jsonStringMyData;
+
                     parameters = new List<MySqlParameter>()
                     {
                         parameter1,
                         parameter2,
                         parameter3,
                         parameter4,
-                        parameter5
+                        parameter5,
+                        parameter6
                     };
                     MySqlDataReader res = null;
                     try
@@ -210,22 +227,101 @@ namespace MyGIS
 
         private void DataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-
         }
+
+        private double lastPositionX;
+        private double lastPositionY;
+        private bool ImageMove = false;
 
         private void image_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            var grid = sender as Grid;
 
+            if (grid is null)
+                return;
+
+            grid.Background = new SolidColorBrush(System.Windows.Media.Colors.Red);
+
+            //grid.Uid
+            //    "imageTopLeft"
+            //    "imageTopRight"
+            //    "imageBottomLeft"
+            //    "imageBottomRight"
+
+            double x = grid.Margin.Left,
+                y = grid.Margin.Bottom;
+
+            if (grid.Uid == "imageTopLeft")
+            {
+                MyData[0].PixelX = x;
+                MyData[0].PixelY = y;
+            }
+
+            if (grid.Uid == "imageTopRight")
+            {
+                MyData[1].PixelX = x;
+                MyData[1].PixelY = y;
+            }
+            if (grid.Uid == "imageBottomRight")
+            {
+                MyData[2].PixelX = x;
+                MyData[2].PixelY = y;
+            }
+            if (grid.Uid == "imageBottomLeft")
+            {
+                MyData[3].PixelX = x;
+                MyData[3].PixelY = y;
+            }
+
+            pointsBinding.Items.Refresh();
+            ImageMove = false;
         }
 
         private void image_MouseMove(object sender, MouseEventArgs e)
         {
+            var grid = sender as Grid;
 
+            if (grid is null)
+                return;
+
+            System.Windows.Point point = e.GetPosition(MapView);
+
+            if (ImageMove)
+            {
+                double dx = point.X - lastPositionX,
+                    dy = point.Y - lastPositionY;
+
+                grid.Margin = new Thickness(grid.Margin.Left + dx, grid.Margin.Top + dy, grid.Margin.Right - dx, grid.Margin.Bottom - dy);
+
+                lastPositionX = point.X;
+                lastPositionY = point.Y;
+            }
         }
 
         private void image_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            var grid = sender as Grid;
 
+            if (grid is null)
+                return;
+
+            grid.Background = new SolidColorBrush(System.Windows.Media.Colors.Blue);
+
+            //e.GetPosition(grid)
+
+            System.Windows.Point point = e.GetPosition(MapView);
+
+            ImageMove = true;
+
+            lastPositionX = point.X;
+            lastPositionY = point.Y;
+
+            Log.Information("({0} {1})", lastPositionX, lastPositionY);
+        }
+
+        private void Grid_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            ImageMove = false;
         }
     }
 }

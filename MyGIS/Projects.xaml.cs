@@ -52,6 +52,11 @@ namespace MyGIS
 
         private async void Page_Initialized(object sender, EventArgs e)
         {
+            await LoadProjectFromDb();
+        }
+
+        public async Task LoadProjectFromDb()
+        {
             infoProjects.Clear();
 
             string command = "SELECT info.idProject, info.Name, info.DateOfCreation, info.DateOfLastEdit, image.dataOffSet, image.ProjectResizedImage FROM ProjectInformations as info join ProjectImages as image on info.idProject = image.idProject;";
@@ -61,7 +66,7 @@ namespace MyGIS
 
             var reader = await DbManager.ExecuteCommand(command);
 
-            while(await reader.ReadAsync())
+            while (await reader.ReadAsync())
             {
                 int id = reader.GetInt32(0);
 
@@ -86,7 +91,7 @@ namespace MyGIS
                 ProjectPanel.Children.Add(
                     CreateItemOfProjects(name, dateOfCreation, dateOfLastEdit, imageSource, id.ToString()));
             }
-            
+
 
             await reader.CloseAsync();
 
@@ -105,6 +110,20 @@ namespace MyGIS
             mainGrid.MouseLeave += MainGrid_MouseLeave;
             mainGrid.MouseEnter += MainGrid_MouseEnter;
             mainGrid.MouseDown += Grid_MouseDown;
+
+            Button deleteButton = new Button
+            {
+                Width = 20,
+                Height = 20,
+                Content = "x",
+                VerticalAlignment = VerticalAlignment.Top,
+                HorizontalContentAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(100, 10, 0, 0)
+            };
+            deleteButton.Click += DeleteImageButton_Click;
+            deleteButton.Uid = "DeleteButton" + id;
+            Panel.SetZIndex(deleteButton, 3);
+
 
             Grid icon = new Grid()
             {
@@ -156,7 +175,7 @@ namespace MyGIS
 
             StackPanel stackPanel = new StackPanel();
 
-
+            
             grid.Children.Add(frame);
             stackPanel.Children.Add(label);
             stackPanel.Children.Add(label1);
@@ -165,10 +184,57 @@ namespace MyGIS
 
             mainGrid.Children.Add(MFrame);
             mainGrid.Children.Add(labelOpenProject);
+            mainGrid.Children.Add(deleteButton);
             mainGrid.Children.Add(grid);
             mainGrid.Children.Add(icon);
+            
+
 
             return mainGrid;
+        }
+
+        private async void DeleteImageButton_Click(object sender, RoutedEventArgs e)
+        {
+            Button? button = sender as Button;
+
+            if (button is null)
+                return;
+
+            string buttonIdentify = "DeleteButton";
+            string uid = button.Uid;
+
+            int id = int.Parse(uid.Substring(buttonIdentify.Length, uid.Length - buttonIdentify.Length));
+
+            MessageBoxResult result = MessageBox.Show("Вы уверены?", "Удалить проект", MessageBoxButton.OKCancel);
+
+            if (result == MessageBoxResult.OK) 
+            {
+                await Task.Run(async () => {
+
+                    string command = "delete from ProjectInformations where idProject = @id",
+                    command1 = "delete from ProjectImages where idProject = @id";
+
+                    List<MySqlParameter> parameters = new List<MySqlParameter>()
+                    {
+                        new MySqlParameter("@id", MySqlDbType.Int32)
+                        {
+                            Value = id
+                        }
+                    };
+
+                    await DbManager.OpenConnection();
+
+                    var reader = await DbManager.ExecuteCommand(command1, parameters);
+                    await reader.CloseAsync();
+
+                    reader = await DbManager.ExecuteCommand(command, parameters);
+                    await reader.CloseAsync();
+
+                    await DbManager.CloseConnection();
+                });
+
+                await LoadProjectFromDb();
+            }
         }
 
         private void MainGrid_MouseLeave(object sender, MouseEventArgs e)
@@ -244,9 +310,9 @@ namespace MyGIS
             this.NavigationService.Navigate(page);
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void Button_Click(object sender, RoutedEventArgs e)
         {
-            Page_Initialized(sender, e);
+            await LoadProjectFromDb();
         }
 
        
