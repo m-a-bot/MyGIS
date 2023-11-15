@@ -9,7 +9,7 @@ namespace MyGIS
 {
     public class RelayCommand : ICommand
     {
-        private Action<object> _execute;
+        private Action<object?> _execute;
 
         private Func<object, bool> _canExecute;
 
@@ -20,7 +20,7 @@ namespace MyGIS
             remove { CommandManager.RequerySuggested -= value; }
         }
 
-        public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        public RelayCommand(Action<object?> execute, Func<object, bool> canExecute = null)
         {
             _execute = execute;
             _canExecute = canExecute;

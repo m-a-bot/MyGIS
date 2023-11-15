@@ -25,33 +25,22 @@ namespace MyGIS
             SetupMap();
 
             CreateGraphics();
+
         }
 
-        private RelayCommand addMapImage;
 
         // add points of binding
-        public RelayCommand AddMapImage
+        public void AddMapImage(double x, double y, byte[] imageBytes)
         {
-            get
-            {
-                return addMapImage ?? (
-                 addMapImage = new RelayCommand(
-                     (obj) =>
-                     {
-                         byte[] image = obj as byte[];
+            GraphicsOverlay imageMapOverlay = new GraphicsOverlay();
 
-                         if (image != null) 
-                         {
-                             //var rTimeImage = new RuntimeImage(image);
+            var image = new PictureMarkerSymbol(new RuntimeImage(imageBytes));
 
-                             //new ImageFrame(rTimeImage, )
+            var graphic = new Graphic(new MapPoint(x, y), image);
 
-                             //Map.OperationalLayers.Clear();
-                         }
-                     }
-                  )
-                ); 
-            }
+            imageMapOverlay.Graphics.Add(graphic);
+
+            GraphicsOverlays.Add(imageMapOverlay);
         }
 
         //(49, 56) (78.5760942765971, 64.015213867277) Label "левый вверх",
@@ -61,7 +50,9 @@ namespace MyGIS
 
         private void SetupMap()
         {
-            this.Map = new Map(BasemapStyle.ArcGISColoredPencil);
+            //new Raster()
+
+            //this.Map = new Map(new Basemap(new RasterLayer();
         }
 
         private void Create()

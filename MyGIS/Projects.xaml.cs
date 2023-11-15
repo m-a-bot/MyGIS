@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -66,15 +67,35 @@ namespace MyGIS
 
             var reader = await DbManager.ExecuteCommand(command);
 
+            await foreach (var project in GetAllProjects(reader))
+            {
+                int id = (int)project[0];
+                string name = (string)project[1];
+                DateOnly dateOfCreation = (DateOnly)project[2];
+                DateOnly dateOfLastEdit = (DateOnly)project[3];
+                ImageSource imageSource = project[4] as ImageSource;
+
+                ProjectPanel.Children.Add(CreateItemOfProjects(
+                    name, dateOfCreation, dateOfLastEdit, imageSource, id.ToString()));
+            }
+
+            await reader.CloseAsync();
+
+            await DbManager.CloseConnection();
+
+            Log.Information("Projects loaded");
+        }
+
+        private async IAsyncEnumerable<List<object>> GetAllProjects(MySqlDataReader reader)
+        {
             while (await reader.ReadAsync())
             {
                 int id = reader.GetInt32(0);
-
                 string name = reader.GetString(1);
+                
+                DateOnly dateOfCreation = reader.GetDateOnly(2);
 
-                DateTime dateOfCreation = reader.GetDateTime(2);
-
-                DateTime dateOfLastEdit = reader.GetDateTime(3);
+                DateOnly dateOfLastEdit = reader.GetDateOnly(3);
 
                 int dataOffSet = reader.GetInt32(4);
 
@@ -84,23 +105,20 @@ namespace MyGIS
 
                 var imageSource = ImageTools.ByteArrayToImageSource(buffer);
 
+                List<object> list = new List<object>() { 
+                    id, name, dateOfCreation,
+                    dateOfLastEdit, imageSource
+                };
+
                 var info = new InfoProject(id, name);
 
                 infoProjects.Add(info);
-
-                ProjectPanel.Children.Add(
-                    CreateItemOfProjects(name, dateOfCreation, dateOfLastEdit, imageSource, id.ToString()));
+                
+                yield return list;
             }
-
-
-            await reader.CloseAsync();
-
-            await DbManager.CloseConnection();
-
-            Log.Information("Projects loaded");
         }
 
-        private Grid CreateItemOfProjects(string name, DateTime dateOfCreation, DateTime dateOfLastEdit, ImageSource image, string id)
+        private Grid CreateItemOfProjects(string name, DateOnly dateOfCreation, DateOnly dateOfLastEdit, ImageSource image, string id)
         {
             Grid mainGrid = new Grid();
             mainGrid.Width = 140;

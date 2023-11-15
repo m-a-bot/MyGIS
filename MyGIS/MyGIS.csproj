@@ -35,4 +35,13 @@
     <Resource Include="images/top_right.png" />
   </ItemGroup>
 
+  <!-- <ItemGroup>
+  <Resource Include="images/" />
+  </ItemGroup> -->
+
+  <ItemGroup>
+  <Resource Include="images/oi-circle-add.png" />
+  <Resource Include="images/oi-circle-subtract.png"/>
+  </ItemGroup> 
+
 </Project>

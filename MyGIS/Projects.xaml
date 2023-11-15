@@ -9,6 +9,8 @@
     Width="900"
     Height="800"
     Initialized="Page_Initialized"
+    WindowHeight="800"
+    WindowWidth="900"
     mc:Ignorable="d">
 
     <Grid>
