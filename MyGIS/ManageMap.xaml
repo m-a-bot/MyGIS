@@ -30,10 +30,13 @@
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="149*" />
-            <ColumnDefinition Width="1031*" />
-            <ColumnDefinition Width="20*" />
+            <ColumnDefinition Width="888*" />
+            <ColumnDefinition Width="163*" />
         </Grid.ColumnDefinitions>
 
+        <Frame Grid.RowSpan="3" Grid.ColumnSpan="3" Background="MediumAquamarine"/>
+
+    
         <Grid>
             <Label
                 x:Name="NameOfProject"
@@ -47,9 +50,8 @@
             Grid.Column="0"
             Margin="0,71,0,14">
 
-            <Frame Background="MediumAquamarine" />
 
-            <WrapPanel HorizontalAlignment="Center" Orientation="Vertical">
+            <StackPanel  Orientation="Vertical">
 
                 <Button
                     Width="100"
@@ -57,82 +59,374 @@
                     Margin="0,5"
                     Content="Обновить" />
 
+                <Button
+                x:Name="AddLayerButton"
+                Width="120"
+                Height="20"
+                Click="AddLayerButton_Click"
+                Content="Добавить слой" />
+
                 <Expander
                     Margin="0,5"
-                    HorizontalAlignment="Left"
                     Header="Слои"
+                    
+                    Width="140"
                     IsExpanded="True">
-                    <WrapPanel
-                        Margin="5"
-                        HorizontalAlignment="Left"
-                        Orientation="Vertical">
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="123" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                        </StackPanel>
 
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="123" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
+                    <ScrollViewer>
+                        <StackPanel
+                            Width="110"
+                            Margin="5, 2, 0, 2"
+                            HorizontalAlignment="Left"
+                            Orientation="Vertical">
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <TextBlock Text="1231231231&#10;23123123123123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                <Label Content="123" Width="50" MaxHeight="75" Height="20" FontSize="9"/>
+
+                                <StackPanel Orientation="Horizontal" Height="20" VerticalAlignment="Top" Margin="0, 3">
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Eye.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Select ALL.png"/>
+                                    </Button>
+                                    <Button Width="20" Height="20">
+                                        <Image Source="/images/Edit.png"/>
+                                    </Button>
+                                </StackPanel>
+
+
+                            </StackPanel>
+
+
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="123" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="123" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                            <Button Width="20" Height="20" />
-                        </StackPanel>
-                        <Button
-                            x:Name="AddLayerButton"
-                            Width="120"
-                            Height="20"
-                            Click="AddLayerButton_Click"
-                            Content="Добавить слой" />
-                    </WrapPanel>
+                    </ScrollViewer>
                 </Expander>
 
-            </WrapPanel>
+            </StackPanel>
 
         </Grid>
 
-        <Grid Grid.Row="0" Grid.Column="1">
+        <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2">
 
             <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
-                <ColumnDefinition />
+                <ColumnDefinition Width="169*" />
+                <ColumnDefinition Width="187*" />
+                <ColumnDefinition Width="262*" />
+                <ColumnDefinition Width="206*" />
+                <ColumnDefinition Width="206*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.ColumnSpan="3" Background="LightCoral" />
+            <Frame Background="LightGray"  Grid.ColumnSpan="6"/>
 
-            <GroupBox Grid.Column="0" Header="Выделение" />
+            <GroupBox Grid.Column="0" Header="Инструменты" Margin="3,1,5,3">
 
-            <GroupBox Grid.Column="1" Header="Рисование" />
+                <StackPanel Orientation="Horizontal">
 
-            <GroupBox Grid.Column="2" />
+                    <StackPanel Orientation="Vertical" Margin="5, 0">
+
+                        <Button Background="Transparent" BorderBrush="Transparent" Width="30" >
+                            <Image Source="/images/Cursor.png"/>
+                        </Button>
+
+                        <TextBlock Text="Выбор" FontSize="10"/>
+
+                    </StackPanel>
+
+                    <WrapPanel Orientation="Horizontal" Margin="5, 0" VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                        <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                            <Image Source="/images/Info.png"/>
+                        </Button>
+
+                        <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                            <Image Source="/images/Ruler.png"/>
+                        </Button>
+
+                        <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                            <Image Source="/images/Eraser.png"/>
+                        </Button>
+
+                        <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                            <Image Source="/images/Drag.png"/>
+                        </Button>
+
+                    </WrapPanel>
+
+                </StackPanel>
+
+            </GroupBox>
+
+            <GroupBox Grid.Column="1" Header="Рисование" Margin="3,1,5,3" >
+
+                <WrapPanel Orientation="Horizontal" Margin="5, 0" VerticalAlignment="Center">
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Line.png"/>
+                    </Button>
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Polyline.png"/>
+                    </Button>
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Pentagon.png"/>
+                    </Button>
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Rectangle.png"/>
+                    </Button>
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Ellipse.png"/>
+                    </Button>
+
+                    <Button Background="Transparent" BorderBrush="Transparent" Width="20" Margin="3, 1">
+                        <Image Source="/images/Filled Circle.png"/>
+                    </Button>
+
+                </WrapPanel>
+
+            </GroupBox>
+
+            <GroupBox Grid.Column="2" Header="Стили" Margin="3,1,5,3" Visibility="Hidden" />
+
+            <StackPanel Grid.Column="2" Orientation="Vertical" Width="70" HorizontalAlignment="Center">
+
+                <Button  Background="Transparent" BorderBrush="Transparent" Width="50" Margin="3, 1">
+                    <Image Source="/images/Database Administrator.png"/>
+                </Button>
+
+                <TextBlock Text="SQL-запрос" Width="65"/>
+
+            </StackPanel>
 
         </Grid>
 
 
         <Grid
-            Grid.Row="1"
             Grid.Column="1"
-            Grid.ColumnSpan="2">
+            Grid.ColumnSpan="2" Margin="0,71,0,14" Grid.RowSpan="3">
             <Frame BorderBrush="LightSlateGray" BorderThickness="4" />
 
             <StackPanel
-                Margin="10"
+                Margin="0, 0, 15, 0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 Panel.ZIndex="3"
@@ -149,6 +443,10 @@
                     Click="ZoomInButton_Click">
                     <Image Source="/images/oi-circle-add.png" />
                 </Button>
+
+                <Line Height="5" >
+
+                </Line>
 
                 <Button
                     x:Name="ZoomOutButton"
@@ -177,6 +475,7 @@
             </WrapPanel>
 
         </Grid>
+            
 
     </Grid>
 
