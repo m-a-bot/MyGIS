@@ -15,32 +15,70 @@ using Esri.ArcGISRuntime.Portal;
 using Esri.ArcGISRuntime.Rasters;
 using System.Windows.Input;
 using System.Windows;
+using Esri.ArcGISRuntime.ArcGISServices;
+using System.Collections.ObjectModel;
+using System.Drawing;
 
 namespace MyGIS
 {
-    internal class MapViewModel : INotifyPropertyChanged
+    internal class MapViewModel : DependencyObject, INotifyPropertyChanged
     {
-        public MapViewModel() 
-        {
-            SetupMap();
+        public static readonly DependencyProperty MapProperty;
+        public static readonly DependencyProperty GraphicsOverlaysProperty;
 
-            CreateGraphics();
+        static MapViewModel()
+        {
+            MapProperty = DependencyProperty.Register("Map", typeof(Map), typeof(MapViewModel));
+            GraphicsOverlaysProperty = DependencyProperty.Register("GraphicsOverlays", typeof(GraphicsOverlayCollection), typeof(MapViewModel));
+        }
+
+        string path;
+        InfoProject info;
+        ObservableCollection<PointsMapBinding>? pointsMaps;
+
+        public MapPoint CenterMap { get; set; } = new MapPoint(1500, 1500, SpatialReferences.Wgs84);
+
+        public MapViewModel()
+        {
 
         }
 
-
-        // add points of binding
-        public void AddMapImage(double x, double y, byte[] imageBytes)
+        public MapViewModel(InfoProject infoProject, ObservableCollection<PointsMapBinding>? pointsMaps)
         {
-            GraphicsOverlay imageMapOverlay = new GraphicsOverlay();
+            path = $"temp/{infoProject.Name}{infoProject.IdProject}.tif";
 
-            var image = new PictureMarkerSymbol(new RuntimeImage(imageBytes));
+            info = infoProject;
 
-            var graphic = new Graphic(new MapPoint(x, y), image);
+            this.pointsMaps = pointsMaps;
 
-            imageMapOverlay.Graphics.Add(graphic);
+        }
 
-            GraphicsOverlays.Add(imageMapOverlay);
+        public RasterLayer RasterLayer { get; set; }
+
+        public async Task AddImageLayer()
+        {
+            var image = new Raster(path);
+
+            RasterLayer = new RasterLayer(image);
+
+            await RasterLayer.LoadAsync();
+
+            await SetupMap(RasterLayer);
+
+            await CreateGraphics();
+        }
+
+        public void SetPointsBindings(ObservableCollection<PointsMapBinding>? pointsMaps)
+        {
+            SpatialReference spatialReference = RasterLayer.FullExtent.SpatialReference;
+            Envelope fullExtent = RasterLayer.FullExtent;
+
+            // Ваши координаты (например, центр экстента)
+            double centerX = (fullExtent.XMin + fullExtent.XMax) / 2.0;
+            double centerY = (fullExtent.YMin + fullExtent.YMax) / 2.0;
+
+            // Привязка координат
+            CenterMap = new MapPoint(centerX, centerY, spatialReference);
         }
 
         //(49, 56) (78.5760942765971, 64.015213867277) Label "левый вверх",
@@ -48,74 +86,44 @@ namespace MyGIS
         //  (49, 55.66) (65.3467140546254, 2252.75415887265) Label "левый низ",
         //  (49.5, 55.66) (1924.07463524161, 2262.67619403913) Label "правый низ"
 
-        private void SetupMap()
-        {
-            //new Raster()
 
-            //this.Map = new Map(new Basemap(new RasterLayer();
+        private async Task SetupMap(RasterLayer raster)
+        {
+            await Task.Run(() =>
+            {
+                this.Map = new Map(new Basemap(raster));
+            });
+            
         }
 
-        private void Create()
+        private async Task CreateGraphics()
         {
-            //new RuntimeImage(byte[]);
+            await Task.Run(() => {
+
+                GraphicsOverlayCollection overlays = new GraphicsOverlayCollection();
+
+                this.GraphicsOverlays = overlays;
+
+
+            });
         }
-
-        private void CreateGraphics()
-        {
-            var kazanGraphicsOverlay = new GraphicsOverlay();
-
-            GraphicsOverlayCollection overlays = new GraphicsOverlayCollection()
-            {
-                kazanGraphicsOverlay
-            };
-
-            this.GraphicsOverlays = overlays;
-
-            var dumeBeachPoint = new MapPoint(49.106815, 55.797930, SpatialReferences.Wgs84);
-
-            // Create a symbol to define how the point is displayed.
-            var pointSymbol = new SimpleMarkerSymbol
-            {
-                Style = SimpleMarkerSymbolStyle.Circle,
-                Color = System.Drawing.Color.Orange,
-                Size = 10.0
-            };
-
-            // Add an outline to the symbol.
-            pointSymbol.Outline = new SimpleLineSymbol
-            {
-                Style = SimpleLineSymbolStyle.Solid,
-                Color = System.Drawing.Color.Blue,
-                Width = 2.0
-            };
-
-            // Create a point graphic with the geometry and symbol.
-            var pointGraphic = new Graphic(dumeBeachPoint, pointSymbol);
-
-            // Add the point graphic to graphics overlay.
-            kazanGraphicsOverlay.Graphics.Add(pointGraphic);
-        }
-
-        private Map? _map;
 
         public Map? Map
         {
-            get { return _map; }
+            get { return (Map) GetValue(MapProperty); }
             set
             {
-                _map = value;
+                SetValue(MapProperty, value);
                 OnPropertyChanged();
             }
         }
-
-        private GraphicsOverlayCollection? _graphicsOverlay;
         
         public GraphicsOverlayCollection? GraphicsOverlays
         {
-            get { return _graphicsOverlay; }
+            get { return (GraphicsOverlayCollection) GetValue(GraphicsOverlaysProperty); }
             set
             {
-                _graphicsOverlay = value;
+                SetValue(GraphicsOverlaysProperty, value);
                 OnPropertyChanged();
             }
         }

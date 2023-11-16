@@ -4,11 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:esri="http://schemas.esri.com/arcgis/runtime/2013"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:MyGIS"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="ManageMapPage"
     Title="ManageMap"
     Width="1200"
     Height="800"
+    Loaded="ManageMapPage_Loaded"
     WindowHeight="800"
     WindowWidth="1200"
     mc:Ignorable="d">
@@ -161,10 +164,7 @@
 
             </StackPanel>
 
-            <esri:MapView
-                x:Name="MainMapView"
-                GraphicsOverlays="{Binding GraphicsOverlays, Source={StaticResource MapViewModel}}"
-                Map="{Binding Map, Source={StaticResource MapViewModel}}" Initialized="MainMapView_Initialized" />
+            <esri:MapView x:Name="MainMapView" Loaded="MainMapView_Initialized" />
         </Grid>
 
         <Grid Grid.Row="2" Grid.Column="1">

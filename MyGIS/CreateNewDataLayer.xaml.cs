@@ -19,9 +19,12 @@ namespace MyGIS
     /// </summary>
     public partial class CreateNewDataLayer : Window
     {
-        public CreateNewDataLayer()
+        InfoProject info;
+        public CreateNewDataLayer(InfoProject _info)
         {
             InitializeComponent();
+
+            info = _info;
         }
     }
 }

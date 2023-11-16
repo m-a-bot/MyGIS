@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="Esri.ArcGISRuntime" Version="200.2.0" />
     <PackageReference Include="Esri.ArcGISRuntime.WPF" Version="200.2.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="MySqlConnector" Version="2.2.7" />
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
@@ -41,7 +42,7 @@
 
   <ItemGroup>
   <Resource Include="images/oi-circle-add.png" />
-  <Resource Include="images/oi-circle-subtract.png"/>
+  <Resource Include="images/oi-circle-subtract.png" />
   </ItemGroup> 
 
 </Project>

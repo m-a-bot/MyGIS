@@ -33,7 +33,9 @@ namespace MyGIS
 
         ObservableCollection<PointsMapBinding>? pointsMapBinding;
 
-        double CurrentScale = 100_000;
+        MapViewModel mapViewModel;
+
+        double CurrentScale = 128_000;
 
         Point ScreenCenter;
 
@@ -43,15 +45,29 @@ namespace MyGIS
 
             _info = info;
 
-            DbManager.OpenConnection();
+            mapViewModel = new MapViewModel(_info, pointsMapBinding);
 
-            ScreenCenter = new Point(MainMapView.Width / 2, MainMapView.Height / 2);
+            SetMapBinding();
 
-            MapPoint mapCenterPoint = new MapPoint(49.106815, 55.797930, SpatialReferences.Wgs84);
+            MapPoint mapCenterPoint = mapViewModel.CenterMap;
             MainMapView.SetViewpoint(new Viewpoint(mapCenterPoint, 100_000));
+
         }
 
-        
+        private void SetMapBinding()
+        {
+            Binding bindingMap = new Binding();
+            Binding bindingGraphicsOverlays = new Binding();
+
+            bindingMap.Source = mapViewModel;
+            bindingMap.Path = new PropertyPath(MapViewModel.MapProperty);
+
+            bindingGraphicsOverlays.Source = mapViewModel;
+            bindingGraphicsOverlays.Path = new PropertyPath(MapViewModel.GraphicsOverlaysProperty);
+
+            MainMapView.SetBinding(MapView.MapProperty, bindingMap);
+            MainMapView.SetBinding(MapView.GraphicsOverlaysProperty, bindingMap);
+        }
 
         private void AddLayerButton_Click(object sender, RoutedEventArgs e)
         {
@@ -60,7 +76,9 @@ namespace MyGIS
 
         private async void ZoomInButton_Click(object sender, RoutedEventArgs e)
         {
-            CurrentScale = Math.Max(CurrentScale / 2, 3125);
+            var extent = mapViewModel.RasterLayer.FullExtent;
+
+            CurrentScale = Math.Max(CurrentScale / 2, 125);
             
 
             var center = GetCenterVisibleArea();
@@ -110,9 +128,14 @@ namespace MyGIS
 
         private async void MainMapView_Initialized(object sender, EventArgs e)
         {
+            
+        }
+
+        private async void ManageMapPage_Loaded(object sender, RoutedEventArgs e)
+        {
             await DbManager.OpenConnection();
 
-            string command = "select dataOffSet, ProjectImage, PointsBinding where idProject = @id;";
+            string command = "select dataOffSet, ProjectImage, PointsBinding from ProjectImages where idProject = @id;";
 
             List<MySqlParameter> parameters = new List<MySqlParameter>() {
                 new MySqlParameter("@id", MySqlDbType.Int32)
@@ -124,30 +147,39 @@ namespace MyGIS
 
             var reader = await DbManager.ExecuteCommand(command, parameters);
 
-            while (await reader.ReadAsync())
+            try
             {
-                int dataOffSet = reader.GetInt32(0);
 
-                byte[] buffer = new byte[dataOffSet];
-                reader.GetBytes(1, 0, buffer, 0, dataOffSet);
-
-                var jsonStringPointsBinding = reader.GetString(2);
-
-                pointsMapBinding = JsonSerializer.Deserialize(jsonStringPointsBinding, typeof(ObservableCollection<PointsMapBinding>)) 
-                    as ObservableCollection<PointsMapBinding>;
-
-                using (MemoryStream stream = new MemoryStream())
+                while (await reader.ReadAsync())
                 {
-                    stream.Write(buffer, 0, buffer.Length);
+                    int dataOffSet = reader.GetInt32(0);
 
-                    imageMap = System.Drawing.Image.FromStream(stream);
+                    byte[] buffer = new byte[dataOffSet];
+                    reader.GetBytes(1, 0, buffer, 0, dataOffSet);
+
+                    var jsonStringPointsBinding = reader.GetString(2);
+
+                    pointsMapBinding = JsonSerializer.Deserialize(jsonStringPointsBinding, typeof(ObservableCollection<PointsMapBinding>))
+                        as ObservableCollection<PointsMapBinding>;
+
+                    using (MemoryStream stream = new MemoryStream())
+                    {
+                        stream.Write(buffer, 0, buffer.Length);
+
+                        imageMap = System.Drawing.Image.FromStream(stream);
+
+                        imageMap.Save($"temp/{_info.Name}{_info.IdProject}.tif", System.Drawing.Imaging.ImageFormat.Tiff);
+                    }
+
                 }
-                    
             }
+            catch { }
 
             await reader.CloseAsync();
 
             await DbManager.CloseConnection();
+
+            
         }
     }
 }
