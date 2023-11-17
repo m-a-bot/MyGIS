@@ -6,5 +6,13 @@
     xmlns:local="clr-namespace:MyGIS"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     StartupUri="Projects.xaml">
-    <Application.Resources />
+    <Application.Resources>
+        <Style x:Key="CustomButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20"/>
+
+            <Setter Property="Background" Value="#fff"/>
+
+        </Style>
+    </Application.Resources>
 </Application>
