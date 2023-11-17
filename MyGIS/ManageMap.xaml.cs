@@ -27,7 +27,7 @@ namespace MyGIS
     /// </summary>
     public partial class ManageMap : Page
     {
-        InfoProject _info;
+        InfoProject _info = new InfoProject(4, "4 project");
 
         System.Drawing.Image imageMap;
 
@@ -39,11 +39,9 @@ namespace MyGIS
 
         Point ScreenCenter;
 
-        public ManageMap(InfoProject info)
+        public ManageMap()
         {
             InitializeComponent();
-
-            _info = info;
 
             mapViewModel = new MapViewModel(_info, pointsMapBinding);
 
@@ -67,11 +65,6 @@ namespace MyGIS
 
             MainMapView.SetBinding(MapView.MapProperty, bindingMap);
             MainMapView.SetBinding(MapView.GraphicsOverlaysProperty, bindingMap);
-        }
-
-        private void AddLayerButton_Click(object sender, RoutedEventArgs e)
-        {
-            new CreateNewDataLayer(_info).Show();
         }
 
         private async void ZoomInButton_Click(object sender, RoutedEventArgs e)
@@ -120,6 +113,7 @@ namespace MyGIS
             var reader = await DbManager.ExecuteCommand(command, mySqlParameters);
 
             // read all data
+
 
             await reader.CloseAsync();
 

@@ -323,9 +323,9 @@ namespace MyGIS
             if (info is null)
                 return;
 
-            var page = new ManageMap(info);
+            //var page = new ManageMap(info);
 
-            this.NavigationService.Navigate(page);
+            //this.NavigationService.Navigate(page);
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)

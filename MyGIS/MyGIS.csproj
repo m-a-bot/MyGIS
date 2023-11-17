@@ -45,4 +45,27 @@
   <Resource Include="images/oi-circle-subtract.png" />
   </ItemGroup> 
 
+  <ItemGroup>
+  <Resource Include="images/Cursor.png" />
+  <Resource Include="images/Database Administrator.png" />
+  <Resource Include="images/Drag.png" />
+  <Resource Include="images/Dashed Line.png" />
+  <Resource Include="images/Edit.png" />
+  <Resource Include="images/Ellipse.png" />
+  <Resource Include="images/Eraser.png" />
+  <Resource Include="images/Eye.png" />
+  <Resource Include="images/Filled Circle.png" />
+  <Resource Include="images/Info.png" />
+  <Resource Include="images/Invisible.png" />
+  <Resource Include="images/Line.png" />
+  <Resource Include="images/Pentagon.png" />
+  <Resource Include="images/Polyline.png" />
+  <Resource Include="images/Rectangle.png" />
+  <Resource Include="images/Ruler.png" />
+  <Resource Include="images/Select All.png" />
+  <Resource Include="images/Select None.png" />
+  <Resource Include="images/Enlarge.png" />
+  <Resource Include="images/Rotate.png" />
+  </ItemGroup>
+
 </Project>
