@@ -193,7 +193,7 @@ BorderBrush="Transparent">
 
             <Grid Grid.Row="1">
 
-                <TextBlock FontSize="10" Text="Слои" TextAlignment="Center" Margin="0,10,0,0" />
+                <TextBlock  Text="Слои" TextAlignment="Center" Margin="0,10,0,2" />
 
                 <ScrollViewer Margin="0, 25, 0, 0">
 
@@ -220,7 +220,11 @@ BorderBrush="Transparent">
                                         <Button
                                             Height="20"
                                         Width="20"
+                                        x:Name="VisibilityLayerButton"
                                         Background="Transparent"
+                                        Tag="Visible"
+                                        Uid="{Binding Path=Id}"
+                                       Click="VisibilityLayerButton_Click"
                                         BorderBrush="Transparent">
                                             <Image Source="/images/Eye.png" />
                                         </Button>
@@ -228,21 +232,24 @@ BorderBrush="Transparent">
                                         <Button
                                         Height="20"
                                     Width="20"
+                                    Name="EditLayerButton"
+                                    Uid="{Binding Path=Id}"
+                                    Click="EditLayerButton_Click"
                                     Background="Transparent"
                                     BorderBrush="Transparent">
                                             <Image Source="/images/Edit.png" />
                                         </Button>
 
                                     </StackPanel>
-                                    
+
                                 </Grid>
-                                
+
                             </DataTemplate>
-                            
+
                         </ListView.ItemTemplate>
-                        
+
                     </ListView>
-                    
+
                 </ScrollViewer>
 
             </Grid>
@@ -323,10 +330,33 @@ Background="#fff">
 
             <esri:MapView x:Name="MapView"/>
 
+            <!--Над grid можно выводить координаты -->
+            <Grid Height="20" VerticalAlignment="Bottom">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="4*"/>
+                    <ColumnDefinition Width="11*"/>
+
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" HorizontalAlignment="Left" Orientation="Horizontal" Width="245">
+                    <TextBlock Text="Редактируемый слой" Width="120" Margin="0, 0, 5, 0"/>
+                    <TextBlock Text="" x:Name="CurrentEditLayerTextBlock" Width="120"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Hidden"  HorizontalScrollBarVisibility="Hidden">
+
+                    <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                        <TextBlock Text="Видимые слои" Width="80"/>
+                    </StackPanel>
+
+                </ScrollViewer>
+
+            </Grid>
+
         </Grid>
 
         <Grid Grid.Column="3">
-          
+
 
             <Grid.RowDefinitions>
                 <RowDefinition Height="5*"/>

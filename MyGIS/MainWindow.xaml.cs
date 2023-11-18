@@ -23,7 +23,7 @@ namespace MyGIS
 {
     public class Layer
     {
-        private int _id;
+        private string _id;
         private string _name;
         List<string> header;
         List<Type> typesHeader;
@@ -31,13 +31,14 @@ namespace MyGIS
 
         public Layer()
         {
+            _id = string.Empty;
             _name = string.Empty;
             header = new List<string>();
             typesHeader = new List<Type>();
             data = new List<object>();
         }
 
-        public Layer(int id, string name, List<string> header, List<Type> typesHeader, List<object> data)
+        public Layer(string id, string name, List<string> header, List<Type> typesHeader, List<object> data)
         {
             Id = id;
             Name = name;
@@ -46,7 +47,7 @@ namespace MyGIS
             this.Data = data;
         }
 
-        public int Id { get => _id; set => _id = value; }
+        public string Id { get => _id; set => _id = value; }
         public string Name { get => _name; set => _name = value; }
         public List<string> Header { get => header; set => header = value; }
         public List<Type> TypesHeader { get => typesHeader; set => typesHeader = value; }
@@ -57,7 +58,10 @@ namespace MyGIS
     public partial class MainWindow : Window
     {
         InfoProject _info = new InfoProject(4, "4 project");
-        
+        Image ImageVisibilityLayer { get; set; }
+        Image ImageInvisibilityLayer { get; set; }
+        Image ImageEditLayer { get; set; }
+        Image ImageUnEditLayer { get; set; }
 
         System.Drawing.Image imageMap;
 
@@ -77,13 +81,16 @@ namespace MyGIS
         {
             InitializeComponent();
             
-
             SetMap(_info);
 
             this.Loaded += MainWindow_Loaded;
 
             StackLayers.ItemsSource = Layers;
 
+            ImageVisibilityLayer = new Image() { Source = new BitmapImage(new Uri("/images/Eye.png", UriKind.Relative)) };
+            ImageInvisibilityLayer = new Image() { Source = new BitmapImage(new Uri("/images/Invisible.png", UriKind.Relative)) };
+            ImageEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/Edit.png", UriKind.Relative)) };
+            ImageUnEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/UnEdit.png", UriKind.Relative)) };
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -106,7 +113,8 @@ namespace MyGIS
 
         private async Task GetAllLayers()
         {
-            Layers.Clear();
+            SetDefaultImageLayer($"{_info.Name}{_info.IdProject}");
+
             await DbManager.OpenConnection();
 
             string command = "select nameTableOfLayer from project_layers where idProject = @id;";
@@ -123,13 +131,19 @@ namespace MyGIS
             // read all data
             while (await reader.ReadAsync())
             {
-                Layers.Add(new Layer() { Name = reader.GetString(0) });
+                var nameTable = reader.GetString(0);
+                Layers.Add(new Layer() { 
+                    Id = nameTable+_info.IdProject,
+                    Name =  nameTable
+                });
             }
 
             await reader.CloseAsync();
 
-            foreach (var layer in Layers)
+            for (int i=1; i < Layers.Count; i++) 
             {
+                var layer = Layers[i];
+
                 await GetAllFromLayer(layer);
             }
 
@@ -191,6 +205,8 @@ namespace MyGIS
                 rasterLayer = new RasterLayer(image);
             });
 
+            
+
             await DbManager.CloseConnection();
         }
 
@@ -233,5 +249,56 @@ namespace MyGIS
 
         }
 
+        private void SetDefaultImageLayer(string name)
+        {
+            
+            Layers.Clear();
+
+            Layers.Add(
+                new Layer()
+                {
+                    Id = $"basemap{_info.IdProject}",
+                    Name = name
+                }
+            );
+
+        }
+
+        private void VisibilityLayerButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button)
+                return;
+
+            if (button.Uid == $"basemap{_info.IdProject}")
+            {
+                rasterLayer.IsVisible = !rasterLayer.IsVisible;
+            }
+
+            string tag = (string)button.Tag;
+
+            if (tag == "Visible")
+            {
+                button.Content = ImageInvisibilityLayer;
+                button.Tag = "Invisible";
+            }
+            if (tag == "Invisible")
+            {
+                button.Content = ImageVisibilityLayer;
+                button.Tag = "Visible";
+            }
+        }
+
+        private void EditLayerButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button)
+                return;
+
+            CurrentEditLayer = Layers.FirstOrDefault((layer) => layer.Id == button.Uid);
+
+            if (CurrentEditLayer is null)
+                return;
+
+            CurrentEditLayerTextBlock.Text = CurrentEditLayer.Name;
+        }
     }
 }
