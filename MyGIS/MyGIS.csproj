@@ -67,10 +67,17 @@
   <Resource Include="images/Select None.png" />
   <Resource Include="images/Enlarge.png" />
   <Resource Include="images/Rotate.png" />
+
   </ItemGroup> 
 
   <ItemGroup>
     <Folder Include="local\" />
   </ItemGroup>
+
+  <ItemGroup>
+<Resource Include="images/Save.png" />
+  <Resource Include="images/Save Close.png" />
+  <Resource Include="images/Undo.png" />
+  </ItemGroup> 
 
 </Project>

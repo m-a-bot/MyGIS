@@ -57,6 +57,7 @@ namespace MyGIS
     public partial class MainWindow : Window
     {
         InfoProject _info = new InfoProject(4, "4 project");
+        
 
         System.Drawing.Image imageMap;
 

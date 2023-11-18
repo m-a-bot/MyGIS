@@ -210,9 +210,9 @@ BorderBrush="Transparent">
                                         <ColumnDefinition/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Width="65" FontSize="10" Text="{Binding Path=Name}" Grid.Column="0" VerticalAlignment="Center"/>
+                                    <TextBlock Width="65" FontSize="10" Text="{Binding Path=Name}" TextWrapping="Wrap" Grid.Column="0" VerticalAlignment="Center"/>
 
-                                    <StackPanel Grid.Column="1" Margin = "0, 3, 0, 3"
+                                    <StackPanel Grid.Column="1" Margin = "10, 3, 0, 3"
                                         Orientation = "Horizontal"
                                         VerticalAlignment = "Top"
                                         Height = "20">
@@ -228,21 +228,10 @@ BorderBrush="Transparent">
                                         <Button
                                         Height="20"
                                     Width="20"
-                                    Visibility="Hidden"
                                     Background="Transparent"
                                     BorderBrush="Transparent">
                                             <Image Source="/images/Edit.png" />
                                         </Button>
-
-                                        <Button
-                                        Height="20"
-                                    Width="20"
-                                    Background="Transparent"
-                                    BorderBrush="Transparent">
-                                            <Image Source="/images/UnEdit.png" />
-                                        </Button>
-
-                                        
 
                                     </StackPanel>
                                     
@@ -295,6 +284,39 @@ BorderBrush="Transparent">
         Background="Transparent"
         BorderBrush="Transparent">
                     <Image Source="/images/oi-circle-subtract.png" />
+                </Button>
+
+            </StackPanel>
+
+            <StackPanel
+Margin="0,15,15,0"
+HorizontalAlignment="Right"
+VerticalAlignment="Top"
+Panel.ZIndex="3"
+Background="#fff">
+
+                <Button
+    x:Name="UndoButton"
+    Width="24"
+    Height="24"
+    Margin="5"
+    Panel.ZIndex="4"
+    Background="Transparent"
+    BorderBrush="Transparent">
+                    <Image Source="/images/Save.png" />
+                </Button>
+
+                <Line Height="5" />
+
+                <Button
+    x:Name="SaveButton"
+    Width="24"
+    Height="24"
+    Margin="5"
+    Panel.ZIndex="4"
+    Background="Transparent"
+    BorderBrush="Transparent">
+                    <Image Source="/images/Undo.png" />
                 </Button>
 
             </StackPanel>
