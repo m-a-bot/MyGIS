@@ -1,5 +1,8 @@
-﻿using Esri.ArcGISRuntime.Mapping;
+﻿using Esri.ArcGISRuntime.Geometry;
+using Esri.ArcGISRuntime.Mapping;
 using Esri.ArcGISRuntime.Rasters;
+using Esri.ArcGISRuntime.Symbology;
+using Esri.ArcGISRuntime.UI;
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
@@ -75,13 +78,17 @@ namespace MyGIS
 
 
         private Map _map;
+        private GraphicsOverlayCollection graphicsOverlays = new GraphicsOverlayCollection();
         RasterLayer rasterLayer;
+        SpatialReference? spatialReference;
 
         public MainWindow()
         {
             InitializeComponent();
             
             SetMap(_info);
+
+            SetGraphicsOverlayCollection();
 
             this.Loaded += MainWindow_Loaded;
 
@@ -91,6 +98,26 @@ namespace MyGIS
             ImageInvisibilityLayer = new Image() { Source = new BitmapImage(new Uri("/images/Invisible.png", UriKind.Relative)) };
             ImageEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/Edit.png", UriKind.Relative)) };
             ImageUnEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/UnEdit.png", UriKind.Relative)) };
+
+            MapView.GeoViewDoubleTapped += MapView_GeoViewDoubleTapped;
+            MapView.GeoViewHolding += MapView_GeoViewHolding;
+            MapView.GeoViewTapped += MapView_GeoViewTapped;
+            
+        }
+
+        private void MapView_GeoViewTapped(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void MapView_GeoViewHolding(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void MapView_GeoViewDoubleTapped(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -101,7 +128,12 @@ namespace MyGIS
 
             await rasterLayer.LoadAsync();
 
-            await Task.Run(()=>_map.Basemap = new Basemap(rasterLayer));
+            await Task.Run(()=> { 
+                _map.Basemap = new Basemap(rasterLayer);
+                spatialReference = rasterLayer.SpatialReference;
+            });
+
+            await DrawPointsBinding(pointsMapBinding);
         }
 
         private void SetMap(InfoProject infoProject)
@@ -109,6 +141,11 @@ namespace MyGIS
             _map = new Map();
 
             MapView.Map = _map;
+        }
+
+        private void SetGraphicsOverlayCollection()
+        {
+            MapView.GraphicsOverlays = graphicsOverlays;
         }
 
         private async Task GetAllLayers()
@@ -299,6 +336,93 @@ namespace MyGIS
                 return;
 
             CurrentEditLayerTextBlock.Text = CurrentEditLayer.Name;
+        }
+
+        private async Task DrawPointsBinding(ObservableCollection<PointsMapBinding>? mapBindings)
+        {
+
+
+            await Task.Run(()=>
+            {
+                if (mapBindings is null)
+                    return;
+
+                Envelope? envelope = rasterLayer.FullExtent;
+
+                if (envelope == null)
+                    return;
+
+                MapPoint leftTop = new MapPoint(mapBindings[0].GeoX + envelope.XMin, mapBindings[0].GeoY + envelope.YMax);
+
+                MapPoint rightTop = new MapPoint(mapBindings[1].GeoX + envelope.XMax, mapBindings[1].GeoY + envelope.YMax);
+
+                MapPoint rightBottom = new MapPoint(mapBindings[2].GeoX + envelope.XMax, mapBindings[2].GeoY + envelope.YMin);
+
+                MapPoint leftBottom = new MapPoint(mapBindings[3].GeoX + envelope.XMin, mapBindings[3].GeoY + envelope.YMin);
+
+                GraphicsOverlay graphicsMapBindingsOverlay = new GraphicsOverlay();
+                graphicsMapBindingsOverlay.Id = $"PointsMapBinding{_info.IdProject}";
+
+                var diamondSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Diamond, System.Drawing.Color.Blue, 20);
+
+                var line = new Esri.ArcGISRuntime.Geometry.Polyline(new List<MapPoint>() {leftTop, rightTop });
+                var lineStyle = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Orange, 3.0);
+
+
+                List<MapPoint> polygonPoints = new List<MapPoint>
+                {
+                    new MapPoint(500, 590),
+                    new MapPoint(550, 540),
+                    new MapPoint(600, 530),
+                    new MapPoint(550, 580),
+                    new MapPoint(650, 600)
+                };
+
+                var polygon = new Esri.ArcGISRuntime.Geometry.Polygon(polygonPoints);
+
+                var polygonSymbolOutline = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Blue, 2.0);
+                var polygonFillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Solid, System.Drawing.Color.Orange, polygonSymbolOutline);
+
+                var polygonGraphic = new Graphic(polygon, polygonFillSymbol);
+
+
+
+                var ellipseArcSegment = new EllipticArcSegment(rightTop, 0, 20, 30, 0, 2 * Math.PI, spatialReference);
+
+                var list = new List<Segment>()
+                { (Segment)ellipseArcSegment};
+
+                var ellipse = new Esri.ArcGISRuntime.Geometry.Polygon(list);
+                var ellipseGraphic = new Graphic(ellipse, polygonFillSymbol);
+
+                List<Graphic> graphics = new List<Graphic>()
+            {
+                new Graphic(leftTop, diamondSymbol),
+                new Graphic(rightTop, diamondSymbol),
+                new Graphic(rightBottom, diamondSymbol),
+                new Graphic(leftBottom, diamondSymbol),
+                new Graphic(line, lineStyle),
+                polygonGraphic,
+                ellipseGraphic
+
+            };
+
+
+                graphicsMapBindingsOverlay.Graphics.AddRange(graphics);
+
+                graphicsOverlays.Add(graphicsMapBindingsOverlay);
+
+            });
+        }
+
+        private void AddCircle()
+        {
+
+        }
+
+        private void AddLine()
+        {
+
         }
     }
 }
