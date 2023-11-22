@@ -23,7 +23,9 @@ class DbManager
 
     private static void Connect()
     {
-        string connectionString = "server=127.0.0.1; port=3306; username=root; password=z9Cx6355; database=gis";
+        string user1 = "z9Cx",
+            user2 = "z9Cx6355";
+        string connectionString = $"server=127.0.0.1; port=3306; username=root; password={user1}; database=gis";
 
         Connection = new MySqlConnection(connectionString);
     }

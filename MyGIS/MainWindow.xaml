@@ -35,6 +35,8 @@
 
                 <Button
                         Width="30"
+                        Name="IdentifyButton"
+                        Click="IdentifyButton_Click"
                         Background="Transparent"
                         BorderBrush="Transparent">
                     <Image Source="/images/Cursor.png" />

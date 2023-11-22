@@ -39,6 +39,7 @@ namespace MyGIS
             header = new List<string>();
             typesHeader = new List<Type>();
             data = new List<object>();
+
         }
 
         public Layer(string id, string name, List<string> header, List<Type> typesHeader, List<object> data)
@@ -56,7 +57,19 @@ namespace MyGIS
         public List<Type> TypesHeader { get => typesHeader; set => typesHeader = value; }
         public List<object> Data { get => data; set => data = value; }
     }
-    
+
+
+    enum TypeOperation
+    {
+        Identify = 0b00000001,
+        InfoAttributes = 0b00000010,
+        Info   = 0b00000100,
+        Clear  = 0b00001000,
+        Move   = 0b00010000,
+        Rotate = 0b00100000,
+        Resize = 0b01000000
+    }
+
 
     public partial class MainWindow : Window
     {
@@ -70,6 +83,8 @@ namespace MyGIS
 
         ObservableCollection<PointsMapBinding>? pointsMapBinding;
         double CurrentScale = 128_000;
+
+        TypeOperation Operation { get; set; }
 
         ObservableCollection<Layer> Layers = new ObservableCollection<Layer>();
 
@@ -99,25 +114,21 @@ namespace MyGIS
             ImageEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/Edit.png", UriKind.Relative)) };
             ImageUnEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/UnEdit.png", UriKind.Relative)) };
 
-            MapView.GeoViewDoubleTapped += MapView_GeoViewDoubleTapped;
-            MapView.GeoViewHolding += MapView_GeoViewHolding;
-            MapView.GeoViewTapped += MapView_GeoViewTapped;
+            MapView.MouseLeftButtonDown += MapView_MouseLeftButtonDown;
+            
             
         }
 
-        private void MapView_GeoViewTapped(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
+        private async void MapView_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            throw new NotImplementedException();
-        }
+            var screenPoint = e.GetPosition(MapView);
 
-        private void MapView_GeoViewHolding(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
+            if (Operation == TypeOperation.Identify)
+            {
+                var result = await MapView.IdentifyGraphicsOverlaysAsync(screenPoint, 10, false);
 
-        private void MapView_GeoViewDoubleTapped(object? sender, Esri.ArcGISRuntime.UI.Controls.GeoViewInputEventArgs e)
-        {
-            throw new NotImplementedException();
+                var tgraph = result[0].GraphicsOverlay;
+            }
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -128,7 +139,7 @@ namespace MyGIS
 
             await rasterLayer.LoadAsync();
 
-            await Task.Run(()=> { 
+            await Task.Run(()=> {
                 _map.Basemap = new Basemap(rasterLayer);
                 spatialReference = rasterLayer.SpatialReference;
             });
@@ -240,6 +251,7 @@ namespace MyGIS
                 var image = new Raster(path);
 
                 rasterLayer = new RasterLayer(image);
+
             });
 
             
@@ -352,18 +364,18 @@ namespace MyGIS
                 if (envelope == null)
                     return;
 
-                MapPoint leftTop = new MapPoint(mapBindings[0].GeoX + envelope.XMin, mapBindings[0].GeoY + envelope.YMax);
+                MapPoint leftTop = new MapPoint(mapBindings[0].PixelX + envelope.XMin, mapBindings[0].PixelY + envelope.YMin, spatialReference);
 
-                MapPoint rightTop = new MapPoint(mapBindings[1].GeoX + envelope.XMax, mapBindings[1].GeoY + envelope.YMax);
+                MapPoint rightTop = new MapPoint(mapBindings[1].PixelX + envelope.XMin, mapBindings[1].PixelY + envelope.YMin, spatialReference);
 
-                MapPoint rightBottom = new MapPoint(mapBindings[2].GeoX + envelope.XMax, mapBindings[2].GeoY + envelope.YMin);
+                MapPoint rightBottom = new MapPoint(mapBindings[2].PixelX + envelope.XMin, mapBindings[2].PixelY + envelope.YMin, spatialReference);
 
-                MapPoint leftBottom = new MapPoint(mapBindings[3].GeoX + envelope.XMin, mapBindings[3].GeoY + envelope.YMin);
+                MapPoint leftBottom = new MapPoint(mapBindings[3].PixelX + envelope.XMin, mapBindings[3].PixelY + envelope.YMin, spatialReference);
 
                 GraphicsOverlay graphicsMapBindingsOverlay = new GraphicsOverlay();
                 graphicsMapBindingsOverlay.Id = $"PointsMapBinding{_info.IdProject}";
 
-                var diamondSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Diamond, System.Drawing.Color.Blue, 20);
+                var diamondSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Diamond, System.Drawing.Color.Blue, 10);
 
                 var line = new Esri.ArcGISRuntime.Geometry.Polyline(new List<MapPoint>() {leftTop, rightTop });
                 var lineStyle = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Orange, 3.0);
@@ -401,9 +413,9 @@ namespace MyGIS
                 new Graphic(rightTop, diamondSymbol),
                 new Graphic(rightBottom, diamondSymbol),
                 new Graphic(leftBottom, diamondSymbol),
-                new Graphic(line, lineStyle),
-                polygonGraphic,
-                ellipseGraphic
+                //new Graphic(line, lineStyle),
+                //polygonGraphic,
+                //ellipseGraphic
 
             };
 
@@ -423,6 +435,11 @@ namespace MyGIS
         private void AddLine()
         {
 
+        }
+
+        private void IdentifyButton_Click(object sender, RoutedEventArgs e)
+        {
+            Operation = TypeOperation.Identify;
         }
     }
 }

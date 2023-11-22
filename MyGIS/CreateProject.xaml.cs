@@ -50,6 +50,9 @@ namespace MyGIS
 
         private bool imageChoice = false;
 
+        double imageWidth = 1;
+        double imageHeight = 1;
+
         public CreateProject()
         {
             InitializeComponent();
@@ -214,6 +217,9 @@ namespace MyGIS
 
             ImageSource source = ImageTools.ByteArrayToImageSource(ImageBytes);
 
+            imageWidth = source.Width;
+            imageHeight = source.Height;
+
             MapView.Background = new ImageBrush(source);
 
             int newWidth = 140,
@@ -250,6 +256,9 @@ namespace MyGIS
 
             double x = grid.Margin.Left,
                 y = grid.Margin.Bottom;
+
+            x = x / grid.Width * imageWidth;
+            y = y / grid.Height * imageHeight;
 
             if (grid.Uid == "imageTopLeft")
             {
