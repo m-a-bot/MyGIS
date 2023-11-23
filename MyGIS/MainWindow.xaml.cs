@@ -2,6 +2,7 @@
 using Esri.ArcGISRuntime.Mapping;
 using Esri.ArcGISRuntime.Rasters;
 using Esri.ArcGISRuntime.Symbology;
+using Esri.ArcGISRuntime.Tasks.Offline;
 using Esri.ArcGISRuntime.UI;
 using MySqlConnector;
 using System;
@@ -157,6 +158,9 @@ namespace MyGIS
             GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
             GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
 
+            if (drawing.Graphics.Count < 2)
+                return;
+
             if (TypeGraphic == TypeGraphic.Rectangle)
             {
                 List<MapPoint> points = new List<MapPoint>();
@@ -170,8 +174,7 @@ namespace MyGIS
 
                 MapPoint point1 = new MapPoint(b.X, a.Y),
                     point2 = new MapPoint(a.X, b.Y);
-
-                points.Add(point1);
+                points.Insert(1, point1);
                 points.Add(point2);
 
                 Esri.ArcGISRuntime.Geometry.Polygon multipoint = new Esri.ArcGISRuntime.Geometry.Polygon(points);
@@ -226,30 +229,64 @@ namespace MyGIS
                 editOverlay.Graphics.Add(polygon);
             }
 
+            if (TypeGraphic == TypeGraphic.Ellipse)
+            {
+                List<MapPoint> points = new List<MapPoint>();
+                foreach (var graphic in drawing.Graphics)
+                {
+                    points.Add((MapPoint)graphic.Geometry);
+                }
+
+                double a = Math.Abs(points[1].X - points[0].X),
+                    b = Math.Abs(points[1].Y - points[0].Y);
+
+                double rotationAngle = Math.Atan2(points[1].X - points[0].X, points[1].Y - points[0].Y) == double.NaN ? 0 : Math.Atan2(a, b);
+
+                double temp;
+                if (a > b)
+                {
+                    temp = a;
+                    a = b;
+                    b = temp;
+                }
+
+                var ellipseArcSegment = new EllipticArcSegment(points[0], 0, b, a / b, 0, 2 * Math.PI, spatialReference);
+                
+                var list = new List<Segment>()
+                { (Segment)ellipseArcSegment};
+
+                SimpleLineSymbol simpleLine = new SimpleLineSymbol(SimpleLineSymbolStyle.ShortDash, System.Drawing.Color.DarkOrange, 3);
+                SimpleFillSymbol polygonFillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Solid, System.Drawing.Color.Honeydew, simpleLine);
+
+                var ellipse = new Esri.ArcGISRuntime.Geometry.Polygon(list);
+                //Esri.ArcGISRuntime.Geometry.Geometry geo = ellipse.Rotate(rotationAngle * 180 / Math.PI);
+
+                var ellipseGraphic = new Graphic(ellipse, polygonFillSymbol);
+
+                drawing.Graphics.Clear();
+                numberOfAddedPoints = 0;
+
+                editOverlay.Graphics.Add(ellipseGraphic);
+            }
+
         }
 
         private void MapView_MouseMove(object sender, MouseEventArgs e)
         {
             var screenPoint = e.GetPosition(MapView);
 
-            var area = MapView.VisibleArea;
+            MapPoint? mapMousePosition = MapView.ScreenToLocation(screenPoint);
 
-            if (area is null)
+            if (mapMousePosition == null)
                 return;
 
-            var extent = area.Extent;
+            double x = (mapMousePosition.X - pointsMapBinding[0].PixelX) / (pointsMapBinding[1].PixelX - pointsMapBinding[0].PixelX),
+                y = (mapMousePosition.Y - pointsMapBinding[3].PixelY) / (pointsMapBinding[0].PixelY - pointsMapBinding[3].PixelY);
 
-            //var point = e.GetPosition(MapView);
-            //double _mapWidth = MapView.ActualWidth,
-            //    _mapHeight = MapView.ActualHeight;
+            double geoX = pointsMapBinding[0].GeoX + x * (pointsMapBinding[1].GeoX - pointsMapBinding[0].GeoX),
+                geoY = pointsMapBinding[3].GeoY + y * (pointsMapBinding[0].GeoY - pointsMapBinding[3].GeoY);
 
-            //double localMapX = point.X / _mapWidth * (pointsMapBinding[1].GeoX - pointsMapBinding[0].GeoX),
-            //    localMapY = point.Y / _mapHeight * (pointsMapBinding[1].GeoY - pointsMapBinding[2].GeoY);
-
-            //double geoCoordsForCurrentPositionX = localMapX * (extent.XMax - extent.XMin),
-            //    geoCoordsForCurrentPositionY = localMapY * (extent.YMax - extent.YMin);
-
-            //GeoCoordsTextBlock.Text = $"Координаты {geoCoordsForCurrentPositionX}; {geoCoordsForCurrentPositionY}";
+            GeoCoordsTextBlock.Text = $"Координаты {geoX}; {geoY};";
             
             if (movableGraphic != null)
             {
@@ -298,6 +335,33 @@ namespace MyGIS
                 if (layer is null) return;
 
                 layer.Graphics[0].IsSelected = true;
+            }
+
+            if (Operation == TypeOperation.Info)
+            {
+                var result = await MapView.IdentifyGraphicsOverlaysAsync(screenPoint, 10, false);
+
+                if (result is null || result.Count <= 0)
+                    return;
+
+
+                var layer = result.First((el) => el.GraphicsOverlay.IsVisible);
+
+                if (layer is null) return;
+
+                Graphic figure = layer.Graphics[0];
+
+                Esri.ArcGISRuntime.Geometry.Geometry? _geo = figure.Geometry;
+
+                double area = _geo.Area(),
+                    length = _geo.Length();
+
+                double areaGeo = _geo.AreaGeodetic(AreaUnits.SquareKilometers),
+                    lengthGeo = _geo.LengthGeodetic(LinearUnits.Kilometers);
+
+                
+
+                MessageBox.Show(area + " - " + areaGeo, length + " - " + lengthGeo);
             }
 
             if (Operation == TypeOperation.Clear)
@@ -395,7 +459,7 @@ namespace MyGIS
             if (TypeGraphic == TypeGraphic.Ellipse)
             {
 
-                if (numberOfAddedPoints < 3)
+                if (numberOfAddedPoints < 2)
                 {
                     MapPoint? mapPoint = MapView.ScreenToLocation(screenPoint);
 

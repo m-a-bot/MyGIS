@@ -23,5 +23,16 @@ namespace MyGIS
         {
             InitializeComponent();
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            string command1 = $"select from ;",
+                command2 = $"select from where ;";
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }
