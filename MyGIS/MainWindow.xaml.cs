@@ -56,11 +56,13 @@ namespace MyGIS
         public List<string> Header { get => header; set => header = value; }
         public List<Type> TypesHeader { get => typesHeader; set => typesHeader = value; }
         public List<object> Data { get => data; set => data = value; }
+        public GraphicsOverlay GraphicsOverlay { get; set; }
     }
 
 
     enum TypeOperation
     {
+        None = 0b00000000,
         Identify = 0b00000001,
         InfoAttributes = 0b00000010,
         Info   = 0b00000100,
@@ -68,6 +70,15 @@ namespace MyGIS
         Move   = 0b00010000,
         Rotate = 0b00100000,
         Resize = 0b01000000
+    }
+
+    enum TypeGraphic
+    {
+        None = 0b0000,
+        Rectangle = 0b0001,
+        Polygon = 0b0010,
+        Line = 0b0100,
+        Ellipse = 0b1000
     }
 
 
@@ -84,7 +95,11 @@ namespace MyGIS
         ObservableCollection<PointsMapBinding>? pointsMapBinding;
         double CurrentScale = 128_000;
 
-        TypeOperation Operation { get; set; }
+        TypeOperation Operation { get; set; } = TypeOperation.None;
+        TypeGraphic TypeGraphic { get; set; } = TypeGraphic.None;
+        Graphic? movableGraphic = null;
+        MapPoint LastMousePosition;
+        int numberOfAddedPoints = 0;
 
         ObservableCollection<Layer> Layers = new ObservableCollection<Layer>();
 
@@ -105,6 +120,8 @@ namespace MyGIS
 
             SetGraphicsOverlayCollection();
 
+            AddDrawingOverlayToGraphicsOverlays();
+
             this.Loaded += MainWindow_Loaded;
 
             StackLayers.ItemsSource = Layers;
@@ -115,19 +132,280 @@ namespace MyGIS
             ImageUnEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/UnEdit.png", UriKind.Relative)) };
 
             MapView.MouseLeftButtonDown += MapView_MouseLeftButtonDown;
+            MapView.MouseDoubleClick += MapView_MouseDoubleClick;
+            MapView.MouseMove += MapView_MouseMove;
+            MapView.MouseRightButtonDown += MapView_MouseRightButtonDown;
+        }
+
+        private void MapView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (movableGraphic != null)
+                movableGraphic.IsSelected = false;
+            movableGraphic = null;
+
+        }
+
+        private void MapView_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (movableGraphic != null)
+                movableGraphic.IsSelected = false;
+            movableGraphic = null;
+
+
+            if (CurrentEditLayer is null)
+                return;
+            GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
+            GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
+
+            if (TypeGraphic == TypeGraphic.Rectangle)
+            {
+                List<MapPoint> points = new List<MapPoint>();
+                foreach (var graphic in drawing.Graphics)
+                {
+                    points.Add((MapPoint)graphic.Geometry);
+                }
+
+                MapPoint a = points[0],
+                    b = points[1];
+
+                MapPoint point1 = new MapPoint(b.X, a.Y),
+                    point2 = new MapPoint(a.X, b.Y);
+
+                points.Add(point1);
+                points.Add(point2);
+
+                Esri.ArcGISRuntime.Geometry.Polygon multipoint = new Esri.ArcGISRuntime.Geometry.Polygon(points);
+
+                var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
+                var fillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Cross, System.Drawing.Color.Crimson, lineSymbol);
+
+                var polygon = new Graphic(multipoint, fillSymbol);
+
+                drawing.Graphics.Clear();
+                numberOfAddedPoints = 0;
+
+                editOverlay.Graphics.Add(polygon);
+            }
+
+            if (TypeGraphic == TypeGraphic.Line)
+            {
+                List<MapPoint> points = new List<MapPoint>();
+                foreach (var graphic in drawing.Graphics)
+                {
+                    points.Add((MapPoint)graphic.Geometry);
+                }
+                Esri.ArcGISRuntime.Geometry.Polyline multipoint = new Esri.ArcGISRuntime.Geometry.Polyline(points);
+                var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
+
+                var line = new Graphic(multipoint, lineSymbol);
+                line.ZIndex = 1;
+
+                drawing.Graphics.Clear();
+                numberOfAddedPoints = 0;
+
+                editOverlay.Graphics.Add(line);
+            }
+
+            if (TypeGraphic == TypeGraphic.Polygon)
+            {
+                List<MapPoint> points = new List<MapPoint>();
+                foreach (var graphic in drawing.Graphics)
+                {
+                    points.Add((MapPoint)graphic.Geometry);
+                }
+                Esri.ArcGISRuntime.Geometry.Polygon multipoint = new Esri.ArcGISRuntime.Geometry.Polygon(points);
+
+                var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
+                var fillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Cross, System.Drawing.Color.Crimson, lineSymbol);
+
+                var polygon = new Graphic(multipoint, fillSymbol);
+
+                drawing.Graphics.Clear();
+                numberOfAddedPoints = 0;
+
+                editOverlay.Graphics.Add(polygon);
+            }
+
+        }
+
+        private void MapView_MouseMove(object sender, MouseEventArgs e)
+        {
+            var screenPoint = e.GetPosition(MapView);
+
+            var area = MapView.VisibleArea;
+
+            if (area is null)
+                return;
+
+            var extent = area.Extent;
+
+            //var point = e.GetPosition(MapView);
+            //double _mapWidth = MapView.ActualWidth,
+            //    _mapHeight = MapView.ActualHeight;
+
+            //double localMapX = point.X / _mapWidth * (pointsMapBinding[1].GeoX - pointsMapBinding[0].GeoX),
+            //    localMapY = point.Y / _mapHeight * (pointsMapBinding[1].GeoY - pointsMapBinding[2].GeoY);
+
+            //double geoCoordsForCurrentPositionX = localMapX * (extent.XMax - extent.XMin),
+            //    geoCoordsForCurrentPositionY = localMapY * (extent.YMax - extent.YMin);
+
+            //GeoCoordsTextBlock.Text = $"Координаты {geoCoordsForCurrentPositionX}; {geoCoordsForCurrentPositionY}";
             
-            
+            if (movableGraphic != null)
+            {
+                var geometry = movableGraphic.Geometry;
+                MapPoint MapLocation = MapView.ScreenToLocation(screenPoint);
+
+                double offSetX = MapLocation.X - LastMousePosition.X,
+                    offSetY = MapLocation.Y - LastMousePosition.Y;
+
+                LastMousePosition = MapLocation;
+                var newGeometry = GeometryEngine.Move(geometry, offSetX, offSetY);
+
+                CurrentEditLayer.GraphicsOverlay.Graphics.First((
+                    el)=> el == movableGraphic
+                ).Geometry = newGeometry;
+            }
         }
 
         private async void MapView_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            movableGraphic = null;
             var screenPoint = e.GetPosition(MapView);
+
+            foreach (var graphicsOverlay in graphicsOverlays)
+            {
+                if (graphicsOverlay is null) continue;
+
+                foreach (var graphic in graphicsOverlay.Graphics)
+                {
+                    if (graphic is null) continue;
+
+                    graphic.IsSelected = false;
+                }
+            }
 
             if (Operation == TypeOperation.Identify)
             {
                 var result = await MapView.IdentifyGraphicsOverlaysAsync(screenPoint, 10, false);
 
-                var tgraph = result[0].GraphicsOverlay;
+                if (result is null || result.Count <= 0)
+                    return;
+
+
+                var layer = result.First((el) => el.GraphicsOverlay.IsVisible);
+
+                if (layer is null) return;
+
+                layer.Graphics[0].IsSelected = true;
+            }
+
+            if (Operation == TypeOperation.Clear)
+            {
+                if (CurrentEditLayer is null)
+                    return;
+
+                var result = await MapView.IdentifyGraphicsOverlayAsync(CurrentEditLayer.GraphicsOverlay, screenPoint, 10, false);
+
+                if (result is null || result.Graphics.Count <= 0)
+                    return;
+
+                var graphic = result.Graphics[0];
+
+                graphicsOverlays[CurrentEditLayer.Name].Graphics.Remove(graphic);
+            }
+
+            if (Operation == TypeOperation.Move)
+            {
+                
+                if (CurrentEditLayer is null)
+                    return;
+
+                var result = await MapView.IdentifyGraphicsOverlayAsync(CurrentEditLayer.GraphicsOverlay, screenPoint, 10, false);
+
+                if (result is null || result.Graphics.Count <= 0)
+                    return;
+
+                var graphic = result.Graphics[0];
+                graphic.IsSelected = true;
+
+                movableGraphic = graphic;
+
+                LastMousePosition = MapView.ScreenToLocation(screenPoint);
+            }
+
+            
+            if (CurrentEditLayer is null)
+                return;
+            GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
+            GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
+
+
+            if (TypeGraphic == TypeGraphic.Rectangle)
+            {
+                
+
+                if (numberOfAddedPoints < 2)
+                {
+                    MapPoint? mapPoint = MapView.ScreenToLocation(screenPoint);
+
+                    var marker = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.DarkGreen, 5);
+
+                    Graphic point = new Graphic(mapPoint, marker);
+
+                    drawing.Graphics.Add(point);
+                    numberOfAddedPoints++;
+                }
+                else
+                {
+                    
+                }
+            }
+
+            if (TypeGraphic == TypeGraphic.Line)
+            {
+
+                if (numberOfAddedPoints < 2)
+                {
+                    MapPoint? mapPoint = MapView.ScreenToLocation(screenPoint);
+
+                    var marker = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.DarkGreen, 5);
+
+                    Graphic point = new Graphic(mapPoint, marker);
+
+                    drawing.Graphics.Add(point);
+                    numberOfAddedPoints++;
+                }
+            }
+
+            if (TypeGraphic == TypeGraphic.Polygon)
+            {
+
+                MapPoint? mapPoint = MapView.ScreenToLocation(screenPoint);
+
+                var marker = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.DarkGreen, 5);
+
+                Graphic point = new Graphic(mapPoint, marker);
+
+                drawing.Graphics.Add(point);
+                numberOfAddedPoints++;
+
+            }
+
+            if (TypeGraphic == TypeGraphic.Ellipse)
+            {
+
+                if (numberOfAddedPoints < 3)
+                {
+                    MapPoint? mapPoint = MapView.ScreenToLocation(screenPoint);
+
+                    var marker = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.DarkGreen, 5);
+
+                    Graphic point = new Graphic(mapPoint, marker);
+
+                    drawing.Graphics.Add(point);
+                    numberOfAddedPoints++;
+                }
             }
         }
 
@@ -141,7 +419,7 @@ namespace MyGIS
 
             await Task.Run(()=> {
                 _map.Basemap = new Basemap(rasterLayer);
-                spatialReference = rasterLayer.SpatialReference;
+                spatialReference = rasterLayer.FullExtent.SpatialReference;
             });
 
             await DrawPointsBinding(pointsMapBinding);
@@ -157,6 +435,14 @@ namespace MyGIS
         private void SetGraphicsOverlayCollection()
         {
             MapView.GraphicsOverlays = graphicsOverlays;
+        }
+
+        private void AddDrawingOverlayToGraphicsOverlays()
+        {
+            GraphicsOverlay drawingOverlay = new GraphicsOverlay() { 
+                Id = "DrawingGraphicOverlay"
+            };
+            graphicsOverlays.Add(drawingOverlay);
         }
 
         private async Task GetAllLayers()
@@ -182,7 +468,7 @@ namespace MyGIS
                 var nameTable = reader.GetString(0);
                 Layers.Add(new Layer() { 
                     Id = nameTable+_info.IdProject,
-                    Name =  nameTable
+                    Name = nameTable
                 });
             }
 
@@ -270,6 +556,7 @@ namespace MyGIS
             List<string> header = new List<string>();
             List<Type> typesTable = new List<Type>();
             List<object> data = new List<object>();
+            GraphicsOverlay graphicsOverlay = new GraphicsOverlay() { Id = nameOfLayer };
 
             int countColumns = reader.FieldCount;
 
@@ -288,11 +575,18 @@ namespace MyGIS
                 {
                     data.Add(reader.GetValue(i));
                 }
+                if (data[countColumns - 1] == null)
+                    continue;
+
+                graphicsOverlay.Graphics.Add((Graphic)data[countColumns - 1]);
             }
 
             layer.Header = header;
             layer.TypesHeader = typesTable;
             layer.Data = data;
+            layer.GraphicsOverlay = graphicsOverlay;
+
+            graphicsOverlays.Add(graphicsOverlay);
 
             await reader.CloseAsync();
 
@@ -342,11 +636,19 @@ namespace MyGIS
             if (sender is not Button button)
                 return;
 
-            CurrentEditLayer = Layers.FirstOrDefault((layer) => layer.Id == button.Uid);
+            Layer? editLayer = Layers.FirstOrDefault((layer) => layer.Id == button.Uid);
 
-            if (CurrentEditLayer is null)
+            if (editLayer is null)
                 return;
 
+            if (CurrentEditLayer == editLayer)
+            {
+                CurrentEditLayerTextBlock.Text = "";
+                CurrentEditLayer = null;
+                return;
+            }
+
+            CurrentEditLayer = editLayer;
             CurrentEditLayerTextBlock.Text = CurrentEditLayer.Name;
         }
 
@@ -374,6 +676,8 @@ namespace MyGIS
 
                 GraphicsOverlay graphicsMapBindingsOverlay = new GraphicsOverlay();
                 graphicsMapBindingsOverlay.Id = $"PointsMapBinding{_info.IdProject}";
+
+                
 
                 var diamondSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Diamond, System.Drawing.Color.Blue, 10);
 
@@ -422,24 +726,111 @@ namespace MyGIS
 
                 graphicsMapBindingsOverlay.Graphics.AddRange(graphics);
 
+                Layers[0].GraphicsOverlay = graphicsMapBindingsOverlay;
+
                 graphicsOverlays.Add(graphicsMapBindingsOverlay);
 
             });
         }
 
-        private void AddCircle()
-        {
-
-        }
-
-        private void AddLine()
-        {
-
-        }
-
         private void IdentifyButton_Click(object sender, RoutedEventArgs e)
         {
             Operation = TypeOperation.Identify;
+            TypeGraphic = TypeGraphic.None;
+            HideInfoAttributes();
+            ClearOverlay();
+        }
+
+        private void InfoAttributesButton_Click(object sender, RoutedEventArgs e)
+        {
+            Operation = TypeOperation.InfoAttributes;
+            TypeGraphic = TypeGraphic.None;
+            ClearOverlay();
+            LastGridColumn.Width = new GridLength(67, GridUnitType.Star);
+        }
+
+        private void InfoButton_Click(object sender, RoutedEventArgs e)
+        {
+            Operation = TypeOperation.Info;
+            TypeGraphic = TypeGraphic.None;
+            HideInfoAttributes();
+            ClearOverlay();
+        }
+
+        private void ClearGraphicButton_Click(object sender, RoutedEventArgs e)
+        {
+            Operation = TypeOperation.Clear;
+            TypeGraphic = TypeGraphic.None;
+            HideInfoAttributes();
+            ClearOverlay();
+        }
+
+        private void DrawRectangleButton_Click(object sender, RoutedEventArgs e)
+        {
+            TypeGraphic = TypeGraphic.Rectangle;
+            Operation = TypeOperation.None;
+
+            ClearOverlay();
+            numberOfAddedPoints = 0;
+            HideInfoAttributes();
+        }
+
+        private void DrawPolygon_Click(object sender, RoutedEventArgs e)
+        {
+            TypeGraphic = TypeGraphic.Polygon;
+            Operation = TypeOperation.None;
+
+            ClearOverlay();
+            numberOfAddedPoints = 0;
+            HideInfoAttributes();
+        }
+
+        private void DrawLineButton_Click(object sender, RoutedEventArgs e)
+        {
+            TypeGraphic = TypeGraphic.Line;
+            Operation = TypeOperation.None;
+
+            ClearOverlay();
+            numberOfAddedPoints = 0;
+
+            HideInfoAttributes();
+        }
+
+        private void DrawEllipseButton_Click(object sender, RoutedEventArgs e)
+        {
+            TypeGraphic = TypeGraphic.Ellipse;
+            Operation = TypeOperation.None;
+
+            ClearOverlay();
+            numberOfAddedPoints = 0;
+
+            HideInfoAttributes();
+        }
+
+        private void MoveGraphicButton_Click(object sender, RoutedEventArgs e)
+        {
+            Operation = TypeOperation.Move;
+            TypeGraphic = TypeGraphic.None;
+            HideInfoAttributes();
+            ClearOverlay();
+        }
+
+        private void HideInfoAttributes()
+        {
+            LastGridColumn.Width = new GridLength(0, GridUnitType.Star);
+        }
+
+        private void OpenSQLWindow(object sender, RoutedEventArgs e)
+        {
+            TypeGraphic = TypeGraphic.None;
+            HideInfoAttributes();
+            ClearOverlay();
+        }
+
+        private void ClearOverlay(string name = "DrawingGraphicOverlay")
+        {
+            GraphicsOverlay? overlay = graphicsOverlays[name];
+            overlay.Graphics.Clear();
         }
     }
 }
