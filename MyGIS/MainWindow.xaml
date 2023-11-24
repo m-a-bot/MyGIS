@@ -337,7 +337,8 @@
                     Margin="5"
                     Panel.ZIndex="4"
                     Background="Transparent"
-                    BorderBrush="Transparent">
+                    BorderBrush="Transparent"
+                    Click="ZoomInButton_Click">
                     <Image Source="/images/oi-circle-add.png" />
                 </Button>
 
@@ -350,7 +351,8 @@
                     Margin="5"
                     Panel.ZIndex="4"
                     Background="Transparent"
-                    BorderBrush="Transparent">
+                    BorderBrush="Transparent"
+                    Click="ZoomOutButton_Click">
                     <Image Source="/images/oi-circle-subtract.png" />
                 </Button>
 
@@ -393,13 +395,24 @@
 
             <TextBlock
                 x:Name="GeoCoordsTextBlock"
-                Width="246"
+                Width="281"
                 Height="25"
                 Margin="5,0,0,25"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Panel.ZIndex="3"
                 Text="Координаты" />
+
+            <TextBlock
+                x:Name="DetailAction"
+                Width="281"
+                Height="25"
+                Margin="5,5,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Panel.ZIndex="3"
+                Text="Действие"
+                Visibility="Hidden" />
 
             <!--  Над grid можно выводить координаты  -->
             <Grid Height="20" VerticalAlignment="Bottom">
@@ -449,6 +462,22 @@
 
             <Frame Grid.RowSpan="10" Background="LightGray" />
 
+            <Button
+                Name="SaveAttributeInformationOfGraphic"
+                Width="24"
+                Height="24"
+                Margin="0,5,5,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Panel.ZIndex="3"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                Click="SaveAttributeInformationOfGraphic_Click">
+
+                <Image Source="images/Save.png" />
+
+            </Button>
+
             <StackPanel Grid.Row="0">
                 <TextBlock
                     Height="30"
@@ -457,21 +486,20 @@
                     FontWeight="Medium"
                     Text="Информация" />
                 <TextBlock
+                    x:Name="NameOfRowEditotTable"
                     Height="20"
                     Margin="2,5"
                     FontSize="11"
-                    Text="Таблица дороги" />
+                    Text="" />
             </StackPanel>
 
-            <DataGrid Grid.Row="1">
-                <DataGrid.Columns>
-                    <DataGridTextColumn MaxWidth="90" Header="Столбец" />
-                    <DataGridTextColumn
-                        Width="145"
-                        MaxWidth="145"
-                        Header="Значение" />
-                </DataGrid.Columns>
-            </DataGrid>
+            <DataGrid
+                x:Name="DataGridOfRowEditor"
+                Grid.Row="1"
+                CanUserAddRows="False"
+                CanUserDeleteRows="False"
+                CanUserReorderColumns="False"
+                CanUserSortColumns="False" />
 
         </Grid>
 

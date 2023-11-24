@@ -17,6 +17,7 @@
     <PackageReference Include="Esri.ArcGISRuntime.WPF" Version="200.2.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageReference Include="MySqlConnector" Version="2.2.7" />
+    <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" />
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />

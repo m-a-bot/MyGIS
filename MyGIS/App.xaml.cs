@@ -25,5 +25,10 @@ namespace MyGIS
                 .WriteTo.File("logs/db.txt")
                 .CreateLogger();
         }
+
+        public static string Wrap(string input)
+        {
+            return $"'{input}'";
+        }
     }
 }

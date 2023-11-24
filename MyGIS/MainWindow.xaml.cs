@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,9 +23,19 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using PropertyChanged;
 
 namespace MyGIS
 {
+    
+
+    [AddINotifyPropertyChangedInterface]
+    public class EditableKeyValuePair
+    {
+        public string Key { get; set; }
+        public object? Value { get; set; }
+    }
+
     public class Layer
     {
         private string _id;
@@ -53,13 +64,13 @@ namespace MyGIS
         }
 
         public string Id { get => _id; set => _id = value; }
+        public int LastRowId { get; set; }
         public string Name { get => _name; set => _name = value; }
         public List<string> Header { get => header; set => header = value; }
         public List<Type> TypesHeader { get => typesHeader; set => typesHeader = value; }
         public List<object> Data { get => data; set => data = value; }
         public GraphicsOverlay GraphicsOverlay { get; set; }
     }
-
 
     enum TypeOperation
     {
@@ -99,12 +110,13 @@ namespace MyGIS
         TypeOperation Operation { get; set; } = TypeOperation.None;
         TypeGraphic TypeGraphic { get; set; } = TypeGraphic.None;
         Graphic? movableGraphic = null;
+        Graphic? selectedGraphic = null;
         MapPoint LastMousePosition;
         int numberOfAddedPoints = 0;
+        string Splitter = "$";
 
         ObservableCollection<Layer> Layers = new ObservableCollection<Layer>();
-
-        List<Layer> VisibleLayers = new List<Layer>();
+        Layer? SelectedLayer = null;
         Layer? CurrentEditLayer = null;
 
 
@@ -146,29 +158,99 @@ namespace MyGIS
 
         }
 
-        private void MapView_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private async void MapView_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (CurrentEditLayer is null || movableGraphic is null)
+                return;
+
             if (movableGraphic != null)
                 movableGraphic.IsSelected = false;
+
+            IDictionary<string, object?> attributes = movableGraphic.Attributes;
+
+            if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
+            {
+                int? indexCorner = (int?) attributes["corner"];
+                if (indexCorner is null)
+                    return;
+
+                Envelope? envelope = rasterLayer.FullExtent;
+
+                if (envelope == null)
+                    return;
+
+                MapPoint mapPoint = (MapPoint)movableGraphic.Geometry;
+
+                pointsMapBinding[indexCorner.Value].PixelX = mapPoint.X;
+                pointsMapBinding[indexCorner.Value].PixelY = mapPoint.Y;
+
+                // mapPoint.X - envelope.XMin
+                // mapPoint.Y - envelope.YMin
+
+                string value = App.Wrap(JsonSerializer.Serialize(pointsMapBinding));
+
+                await DbManager.OpenConnection();
+
+                string command = $"update project_images set PointsBinding = {value} where idProject = {_info.IdProject};";
+
+                MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                await reader.CloseAsync();
+
+                await DbManager.CloseConnection();
+            }
+            else
+            {
+                try
+                {
+                    string idHeader = CurrentEditLayer.Header[0];
+                    int IdRow = (int)attributes[idHeader];
+
+                    string value = App.Wrap(movableGraphic.Geometry.ToJson() + Splitter + movableGraphic.Symbol.ToJson());
+
+                    await DbManager.OpenConnection();
+
+                    string command = $"update {CurrentEditLayer.Name} set graphic = {value} where {CurrentEditLayer.Header[0]} = {IdRow};";
+
+                    MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                    await reader.CloseAsync();
+
+                    await DbManager.CloseConnection();
+                }
+                catch { }
+            }
+
+
+
             movableGraphic = null;
-
-
-            if (CurrentEditLayer is null)
-                return;
+            
             GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
             GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
 
-            if (drawing.Graphics.Count < 2)
+            if (drawing.Graphics.Count < 2 || TypeGraphic == TypeGraphic.None)
                 return;
+
+            List<MapPoint> points = new List<MapPoint>();
+            foreach (var graphic in drawing.Graphics)
+            {
+                points.Add((MapPoint)graphic.Geometry);
+            }
+            Graphic? shape = null;
+            Dictionary<string, object?> attribures = new Dictionary<string, object?>();
+
+            string idColumn = CurrentEditLayer.Header[0];
+            int id = CurrentEditLayer.LastRowId + 1;
+            attribures[idColumn] = id;
+
+            for (int column = 1; column < CurrentEditLayer.Header.Count-1;  column++)
+            {
+                attribures[CurrentEditLayer.Header[column]] = null;
+            }
+            
 
             if (TypeGraphic == TypeGraphic.Rectangle)
             {
-                List<MapPoint> points = new List<MapPoint>();
-                foreach (var graphic in drawing.Graphics)
-                {
-                    points.Add((MapPoint)graphic.Geometry);
-                }
-
                 MapPoint a = points[0],
                     b = points[1];
 
@@ -182,61 +264,30 @@ namespace MyGIS
                 var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
                 var fillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Cross, System.Drawing.Color.Crimson, lineSymbol);
 
-                var polygon = new Graphic(multipoint, fillSymbol);
-
-                drawing.Graphics.Clear();
-                numberOfAddedPoints = 0;
-
-                editOverlay.Graphics.Add(polygon);
+                shape = new Graphic(multipoint, attribures, fillSymbol);
             }
 
             if (TypeGraphic == TypeGraphic.Line)
             {
-                List<MapPoint> points = new List<MapPoint>();
-                foreach (var graphic in drawing.Graphics)
-                {
-                    points.Add((MapPoint)graphic.Geometry);
-                }
+
                 Esri.ArcGISRuntime.Geometry.Polyline multipoint = new Esri.ArcGISRuntime.Geometry.Polyline(points);
                 var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
 
-                var line = new Graphic(multipoint, lineSymbol);
-                line.ZIndex = 1;
-
-                drawing.Graphics.Clear();
-                numberOfAddedPoints = 0;
-
-                editOverlay.Graphics.Add(line);
+                shape = new Graphic(multipoint, attribures, lineSymbol);
             }
 
             if (TypeGraphic == TypeGraphic.Polygon)
             {
-                List<MapPoint> points = new List<MapPoint>();
-                foreach (var graphic in drawing.Graphics)
-                {
-                    points.Add((MapPoint)graphic.Geometry);
-                }
                 Esri.ArcGISRuntime.Geometry.Polygon multipoint = new Esri.ArcGISRuntime.Geometry.Polygon(points);
 
                 var lineSymbol = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Black, 5);
                 var fillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Cross, System.Drawing.Color.Crimson, lineSymbol);
 
-                var polygon = new Graphic(multipoint, fillSymbol);
-
-                drawing.Graphics.Clear();
-                numberOfAddedPoints = 0;
-
-                editOverlay.Graphics.Add(polygon);
+                shape = new Graphic(multipoint, attribures, fillSymbol);
             }
 
             if (TypeGraphic == TypeGraphic.Ellipse)
             {
-                List<MapPoint> points = new List<MapPoint>();
-                foreach (var graphic in drawing.Graphics)
-                {
-                    points.Add((MapPoint)graphic.Geometry);
-                }
-
                 double a = Math.Abs(points[1].X - points[0].X),
                     b = Math.Abs(points[1].Y - points[0].Y);
 
@@ -261,13 +312,43 @@ namespace MyGIS
                 var ellipse = new Esri.ArcGISRuntime.Geometry.Polygon(list);
                 //Esri.ArcGISRuntime.Geometry.Geometry geo = ellipse.Rotate(rotationAngle * 180 / Math.PI);
 
-                var ellipseGraphic = new Graphic(ellipse, polygonFillSymbol);
-
-                drawing.Graphics.Clear();
-                numberOfAddedPoints = 0;
-
-                editOverlay.Graphics.Add(ellipseGraphic);
+                shape = new Graphic(ellipse, attribures, polygonFillSymbol);
             }
+
+            drawing.Graphics.Clear();
+            numberOfAddedPoints = 0;
+
+            if (shape is null)
+                return;
+
+            editOverlay.Graphics.Add(shape);
+            CurrentEditLayer.LastRowId++;
+
+            string nameTable = CurrentEditLayer.Name;
+            string headers = "";
+            string values = "";
+
+            headers = string.Join(", ", CurrentEditLayer.Header);
+
+            headers = headers.Replace($"{CurrentEditLayer.Header[0]}, ", "");
+
+            for (int i = 1; i < CurrentEditLayer.Header.Count - 1; i++)
+                values += "NULL, ";
+
+            values += App.Wrap(shape.Geometry.ToJson() + Splitter + shape.Symbol.ToJson());
+
+            await Task.Run(async () =>
+            {
+                await DbManager.OpenConnection();
+
+                string command = $"insert into {nameTable} ({headers}) values ({values});";
+
+                MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                await reader.CloseAsync();
+
+                await DbManager.CloseConnection();
+            });
 
         }
 
@@ -308,6 +389,8 @@ namespace MyGIS
         private async void MapView_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             movableGraphic = null;
+            //SelectedLayer = null;
+
             var screenPoint = e.GetPosition(MapView);
 
             foreach (var graphicsOverlay in graphicsOverlays)
@@ -335,6 +418,41 @@ namespace MyGIS
                 if (layer is null) return;
 
                 layer.Graphics[0].IsSelected = true;
+            }
+
+            if (Operation == TypeOperation.InfoAttributes)
+            {
+                var result = await MapView.IdentifyGraphicsOverlaysAsync(screenPoint, 10, false);
+
+                if (result is null || result.Count <= 0)
+                    return;
+
+
+                var layer = result.First((el) => el.GraphicsOverlay.IsVisible);
+
+                if (layer is null) return;
+
+                Layer VisibleLayer = Layers.First((el) => el.GraphicsOverlay == layer.GraphicsOverlay);
+                SelectedLayer = VisibleLayer;
+
+                NameOfRowEditotTable.Text = $"Таблица {VisibleLayer.Name}";
+
+                selectedGraphic = layer.Graphics[0];
+                selectedGraphic.IsSelected = true;
+
+                ObservableCollection<EditableKeyValuePair> list = new ObservableCollection<EditableKeyValuePair> ();
+
+                foreach (KeyValuePair<string, object?> pair in selectedGraphic.Attributes)
+                {
+                    
+                    list.Add(new EditableKeyValuePair()
+                    {
+                        Key = pair.Key,
+                        Value = pair.Value
+                    });
+                }
+
+                DataGridOfRowEditor.ItemsSource = list;
             }
 
             if (Operation == TypeOperation.Info)
@@ -376,7 +494,23 @@ namespace MyGIS
 
                 var graphic = result.Graphics[0];
 
+                string idColumn = CurrentEditLayer.Header[0];
+                int? id = (int?) graphic.Attributes[idColumn];
+
                 graphicsOverlays[CurrentEditLayer.Name].Graphics.Remove(graphic);
+
+                if (id is null)
+                    return;
+
+                await DbManager.OpenConnection();
+
+                string command = $"delete from {CurrentEditLayer.Name} where {idColumn} = {id};";
+
+                MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                await reader.CloseAsync();
+
+                await DbManager.CloseConnection();
             }
 
             if (Operation == TypeOperation.Move)
@@ -511,6 +645,7 @@ namespace MyGIS
 
         private async Task GetAllLayers()
         {
+
             SetDefaultImageLayer($"{_info.Name}{_info.IdProject}");
 
             await DbManager.OpenConnection();
@@ -633,18 +768,48 @@ namespace MyGIS
                 typesTable.Add(type);
             }
 
+            int row = 0;
             while (await reader.ReadAsync())
             {
                 for (int i = 0; i < countColumns; i++)
                 {
                     data.Add(reader.GetValue(i));
                 }
-                if (data[countColumns - 1] == null)
+
+                if (data[(row+1)*countColumns - 1] == null)
                     continue;
 
-                graphicsOverlay.Graphics.Add((Graphic)data[countColumns - 1]);
+                string JsonGeometrySymbol = (string)data[(row + 1) * countColumns - 1];
+
+                try
+                {
+                    string[] para = JsonGeometrySymbol.Split(Splitter);
+
+                    Esri.ArcGISRuntime.Geometry.Geometry geometry = Esri.ArcGISRuntime.Geometry.Geometry.FromJson(para[0]);
+
+                    Symbol symbol = Symbol.FromJson(para[1]);
+
+                    Dictionary<string, object?> attribures = new Dictionary<string, object?>();
+
+                    for (int column = 0; column < countColumns-1; column++)
+                    {
+                        object? attribute = data[row * countColumns + column];
+
+                        if (attribute is System.DBNull)
+                            attribute = null;
+
+                        attribures[header[column]] = attribute;
+                    }
+
+                    graphicsOverlay.Graphics.Add(new Graphic(geometry, attribures, symbol));
+                } catch { }
+
+                row++;
             }
 
+            int index = (row - 1) * countColumns;
+
+            layer.LastRowId = index < 0 ? -1 : (int)data[index];
             layer.Header = header;
             layer.TypesHeader = typesTable;
             layer.Data = data;
@@ -741,51 +906,25 @@ namespace MyGIS
                 GraphicsOverlay graphicsMapBindingsOverlay = new GraphicsOverlay();
                 graphicsMapBindingsOverlay.Id = $"PointsMapBinding{_info.IdProject}";
 
-                
+                Dictionary<string, object?> CornerInfo1 = new Dictionary<string, object?>();
+                CornerInfo1["corner"] = 0;
+            
+                Dictionary<string, object?> CornerInfo2 = new Dictionary<string, object?>();
+                CornerInfo2["corner"] = 1;
+                Dictionary<string, object?> CornerInfo3 = new Dictionary<string, object?>();
+                CornerInfo3["corner"] = 2;
+                Dictionary<string, object?> CornerInfo4 = new Dictionary<string, object?>();
+                CornerInfo4["corner"] = 3;
 
                 var diamondSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Diamond, System.Drawing.Color.Blue, 10);
 
-                var line = new Esri.ArcGISRuntime.Geometry.Polyline(new List<MapPoint>() {leftTop, rightTop });
-                var lineStyle = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Orange, 3.0);
-
-
-                List<MapPoint> polygonPoints = new List<MapPoint>
-                {
-                    new MapPoint(500, 590),
-                    new MapPoint(550, 540),
-                    new MapPoint(600, 530),
-                    new MapPoint(550, 580),
-                    new MapPoint(650, 600)
-                };
-
-                var polygon = new Esri.ArcGISRuntime.Geometry.Polygon(polygonPoints);
-
-                var polygonSymbolOutline = new SimpleLineSymbol(SimpleLineSymbolStyle.Solid, System.Drawing.Color.Blue, 2.0);
-                var polygonFillSymbol = new SimpleFillSymbol(SimpleFillSymbolStyle.Solid, System.Drawing.Color.Orange, polygonSymbolOutline);
-
-                var polygonGraphic = new Graphic(polygon, polygonFillSymbol);
-
-
-
-                var ellipseArcSegment = new EllipticArcSegment(rightTop, 0, 20, 30, 0, 2 * Math.PI, spatialReference);
-
-                var list = new List<Segment>()
-                { (Segment)ellipseArcSegment};
-
-                var ellipse = new Esri.ArcGISRuntime.Geometry.Polygon(list);
-                var ellipseGraphic = new Graphic(ellipse, polygonFillSymbol);
-
                 List<Graphic> graphics = new List<Graphic>()
-            {
-                new Graphic(leftTop, diamondSymbol),
-                new Graphic(rightTop, diamondSymbol),
-                new Graphic(rightBottom, diamondSymbol),
-                new Graphic(leftBottom, diamondSymbol),
-                //new Graphic(line, lineStyle),
-                //polygonGraphic,
-                //ellipseGraphic
-
-            };
+                {
+                    new Graphic(leftTop,CornerInfo1, diamondSymbol),
+                    new Graphic(rightTop,CornerInfo2, diamondSymbol),
+                    new Graphic(rightBottom,CornerInfo3, diamondSymbol),
+                    new Graphic(leftBottom,CornerInfo4, diamondSymbol),
+                };
 
 
                 graphicsMapBindingsOverlay.Graphics.AddRange(graphics);
@@ -803,6 +942,7 @@ namespace MyGIS
             TypeGraphic = TypeGraphic.None;
             HideInfoAttributes();
             ClearOverlay();
+            SetTextAction("Identify");
         }
 
         private void InfoAttributesButton_Click(object sender, RoutedEventArgs e)
@@ -810,7 +950,13 @@ namespace MyGIS
             Operation = TypeOperation.InfoAttributes;
             TypeGraphic = TypeGraphic.None;
             ClearOverlay();
+
+            
+            NameOfRowEditotTable.Text = "";
+            DataGridOfRowEditor.ItemsSource = new List<object>();
             LastGridColumn.Width = new GridLength(67, GridUnitType.Star);
+            
+            SetTextAction("Info Attributes");
         }
 
         private void InfoButton_Click(object sender, RoutedEventArgs e)
@@ -819,6 +965,7 @@ namespace MyGIS
             TypeGraphic = TypeGraphic.None;
             HideInfoAttributes();
             ClearOverlay();
+            SetTextAction("Info");
         }
 
         private void ClearGraphicButton_Click(object sender, RoutedEventArgs e)
@@ -827,6 +974,7 @@ namespace MyGIS
             TypeGraphic = TypeGraphic.None;
             HideInfoAttributes();
             ClearOverlay();
+            SetTextAction("Clear");
         }
 
         private void DrawRectangleButton_Click(object sender, RoutedEventArgs e)
@@ -837,6 +985,7 @@ namespace MyGIS
             ClearOverlay();
             numberOfAddedPoints = 0;
             HideInfoAttributes();
+            SetTextAction("Draw Polygon");
         }
 
         private void DrawPolygon_Click(object sender, RoutedEventArgs e)
@@ -847,6 +996,8 @@ namespace MyGIS
             ClearOverlay();
             numberOfAddedPoints = 0;
             HideInfoAttributes();
+
+            SetTextAction("Draw Polygon");
         }
 
         private void DrawLineButton_Click(object sender, RoutedEventArgs e)
@@ -858,6 +1009,7 @@ namespace MyGIS
             numberOfAddedPoints = 0;
 
             HideInfoAttributes();
+            SetTextAction("Draw Line");
         }
 
         private void DrawEllipseButton_Click(object sender, RoutedEventArgs e)
@@ -869,6 +1021,7 @@ namespace MyGIS
             numberOfAddedPoints = 0;
 
             HideInfoAttributes();
+            SetTextAction("Draw Ellipse");
         }
 
         private void MoveGraphicButton_Click(object sender, RoutedEventArgs e)
@@ -877,10 +1030,13 @@ namespace MyGIS
             TypeGraphic = TypeGraphic.None;
             HideInfoAttributes();
             ClearOverlay();
+            SetTextAction("Move");
         }
 
         private void HideInfoAttributes()
         {
+            SelectedLayer = null;
+            selectedGraphic = null;
             LastGridColumn.Width = new GridLength(0, GridUnitType.Star);
         }
 
@@ -889,12 +1045,88 @@ namespace MyGIS
             TypeGraphic = TypeGraphic.None;
             HideInfoAttributes();
             ClearOverlay();
+
+            Window window = new MySQLWindow();
+            window.Show();
         }
 
         private void ClearOverlay(string name = "DrawingGraphicOverlay")
         {
             GraphicsOverlay? overlay = graphicsOverlays[name];
             overlay.Graphics.Clear();
+        }
+
+        private void SetTextAction(string action)
+        {
+            DetailAction.Visibility = Visibility.Visible;
+            DetailAction.Text = $"Действие {action}";
+        }
+
+        private async void SaveAttributeInformationOfGraphic_Click(object sender, RoutedEventArgs e)
+        {
+            ItemCollection item = DataGridOfRowEditor.Items;
+
+            if (item.Count == 0 || SelectedLayer is null)
+                return;
+            EditableKeyValuePair? rowId = item[0] as EditableKeyValuePair;
+
+
+            string nameTable = SelectedLayer.Name;
+            string condition = SelectedLayer.Header[0] + " = " + rowId.Value;
+            List<string> expressions = new List<string>();
+
+            for (int column=1; column<item.Count; column++)
+            {
+                EditableKeyValuePair? row = item[column] as EditableKeyValuePair;
+
+                if (row.Value is null)
+                    continue;
+
+                string value = App.Wrap(row.Value.ToString());
+
+                expressions.Add(row.Key + " = " + value);
+            }
+            string setColums = string.Join(", ", expressions.ToArray());
+
+            string command = $"update {nameTable} set {setColums} where {condition};";
+
+            try
+            {
+
+                await DbManager.OpenConnection();
+
+                MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                await reader.CloseAsync();
+
+                await DbManager.CloseConnection();
+
+                for (int column = 1; column < item.Count; column++)
+                {
+                    EditableKeyValuePair? row = item[column] as EditableKeyValuePair;
+
+                    selectedGraphic.Attributes[row.Key] = row.Value;
+                }
+
+                MessageBox.Show("Ok");
+            } catch
+            {
+                MessageBox.Show("Wrong data");
+            }
+        }
+
+        private async void ZoomOutButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentScale *= 2;
+
+            await MapView.SetViewpointScaleAsync(CurrentScale);
+        }
+
+        private async void ZoomInButton_Click(object sender, RoutedEventArgs e)
+        {
+            CurrentScale = Math.Max(CurrentScale / 2, 125);
+
+            await MapView.SetViewpointScaleAsync(CurrentScale);
         }
     }
 }
