@@ -20,14 +20,16 @@
             Text="Выбрать колонки"
             TextWrapping="Wrap" />
         <TextBox
+            x:Name="TextBoxForColumns"
             Width="401"
             Height="120"
             Margin="162,52,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
-            Text="TextBox"
+            Text=""
             TextWrapping="Wrap" />
         <ComboBox
+            Name="ColumnsOfTable"
             Width="401"
             Margin="162,24,0,0"
             HorizontalAlignment="Left"
@@ -41,6 +43,7 @@
             Text="Из таблицы"
             TextWrapping="Wrap" />
         <ComboBox
+            Name="ListOfTables"
             Width="401"
             Margin="162,184,0,0"
             HorizontalAlignment="Left"
@@ -54,12 +57,13 @@
             Text="С условием"
             TextWrapping="Wrap" />
         <TextBox
+            x:Name="conditionTextBox"
             Width="401"
             Height="120"
             Margin="162,231,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
-            Text="TextBox"
+            Text=""
             TextWrapping="Wrap" />
         <Button
             Width="95"

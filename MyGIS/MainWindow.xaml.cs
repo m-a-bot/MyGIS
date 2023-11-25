@@ -352,6 +352,16 @@ namespace MyGIS
 
         }
 
+        private double GetGeoX(double x)
+        {
+            return pointsMapBinding[0].GeoX + x * (pointsMapBinding[1].GeoX - pointsMapBinding[0].GeoX);
+        }
+
+        private double GetGeoY(double y)
+        {
+            return pointsMapBinding[3].GeoY + y * (pointsMapBinding[0].GeoY - pointsMapBinding[3].GeoY);
+        }
+
         private void MapView_MouseMove(object sender, MouseEventArgs e)
         {
             var screenPoint = e.GetPosition(MapView);
@@ -364,8 +374,8 @@ namespace MyGIS
             double x = (mapMousePosition.X - pointsMapBinding[0].PixelX) / (pointsMapBinding[1].PixelX - pointsMapBinding[0].PixelX),
                 y = (mapMousePosition.Y - pointsMapBinding[3].PixelY) / (pointsMapBinding[0].PixelY - pointsMapBinding[3].PixelY);
 
-            double geoX = pointsMapBinding[0].GeoX + x * (pointsMapBinding[1].GeoX - pointsMapBinding[0].GeoX),
-                geoY = pointsMapBinding[3].GeoY + y * (pointsMapBinding[0].GeoY - pointsMapBinding[3].GeoY);
+            double geoX = GetGeoX(x),
+                geoY = GetGeoY(y);
 
             GeoCoordsTextBlock.Text = $"Координаты {geoX}; {geoY};";
             
@@ -468,18 +478,13 @@ namespace MyGIS
                 if (layer is null) return;
 
                 Graphic figure = layer.Graphics[0];
+                figure.IsSelected = true;
 
                 Esri.ArcGISRuntime.Geometry.Geometry? _geo = figure.Geometry;
-
                 double area = _geo.Area(),
                     length = _geo.Length();
 
-                double areaGeo = _geo.AreaGeodetic(AreaUnits.SquareKilometers),
-                    lengthGeo = _geo.LengthGeodetic(LinearUnits.Kilometers);
-
                 
-
-                MessageBox.Show(area + " - " + areaGeo, length + " - " + lengthGeo);
             }
 
             if (Operation == TypeOperation.Clear)
@@ -1046,7 +1051,7 @@ namespace MyGIS
             HideInfoAttributes();
             ClearOverlay();
 
-            Window window = new MySQLWindow();
+            Window window = new MySQLWindow(Layers);
             window.Show();
         }
 
