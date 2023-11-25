@@ -97,10 +97,6 @@ namespace MyGIS
     public partial class MainWindow : Window
     {
         InfoProject _info = new InfoProject(4, "4 project");
-        Image ImageVisibilityLayer { get; set; }
-        Image ImageInvisibilityLayer { get; set; }
-        Image ImageEditLayer { get; set; }
-        Image ImageUnEditLayer { get; set; }
 
         System.Drawing.Image imageMap;
 
@@ -116,6 +112,7 @@ namespace MyGIS
         string Splitter = "$";
 
         ObservableCollection<Layer> Layers = new ObservableCollection<Layer>();
+        List<string>? visibleLayerNames = new List<string>();
         Layer? SelectedLayer = null;
         Layer? CurrentEditLayer = null;
 
@@ -138,11 +135,6 @@ namespace MyGIS
             this.Loaded += MainWindow_Loaded;
 
             StackLayers.ItemsSource = Layers;
-
-            ImageVisibilityLayer = new Image() { Source = new BitmapImage(new Uri("/images/Eye.png", UriKind.Relative)) };
-            ImageInvisibilityLayer = new Image() { Source = new BitmapImage(new Uri("/images/Invisible.png", UriKind.Relative)) };
-            ImageEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/Edit.png", UriKind.Relative)) };
-            ImageUnEditLayer = new Image() { Source = new BitmapImage(new Uri("/images/UnEdit.png", UriKind.Relative)) };
 
             MapView.MouseLeftButtonDown += MapView_MouseLeftButtonDown;
             MapView.MouseDoubleClick += MapView_MouseDoubleClick;
@@ -484,7 +476,24 @@ namespace MyGIS
                 double area = _geo.Area(),
                     length = _geo.Length();
 
-                
+                double XMin = pointsMapBinding[3].PixelX,
+                    YMin = pointsMapBinding[3].PixelY,
+                    LatitudesMin = pointsMapBinding[3].GeoX,
+                    LongitudeMin = pointsMapBinding[3].GeoY;
+
+                double XMax = pointsMapBinding[1].PixelX,
+                    YMax = pointsMapBinding[1].PixelY,
+                    LatitudesMax = pointsMapBinding[1].GeoX,
+                    LongitudeMax = pointsMapBinding[1].GeoY;
+
+                double geodesicArea = Math.Abs(area * (LatitudesMax - LatitudesMin)
+                    / (XMax - XMin) * (LongitudeMax - LongitudeMin) / (YMax - YMin) * 111 * 111) / 5;
+
+                double lengthOfOblast = Math.Pow((XMax-XMin)* (XMax - XMin) + (YMax-YMin)* (YMax - YMin), 0.5);
+
+                double geodesicLength = length * Math.Pow((LatitudesMax - LatitudesMin)* (LatitudesMax - LatitudesMin) + (LongitudeMax - LongitudeMin)* (LongitudeMax - LongitudeMin), 0.5) / lengthOfOblast * 111 * 1.41 / 5;
+
+                MessageBox.Show(geodesicArea.ToString(), geodesicLength.ToString());
             }
 
             if (Operation == TypeOperation.Clear)
@@ -541,6 +550,9 @@ namespace MyGIS
             if (CurrentEditLayer is null)
                 return;
             GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
+            if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
+                return;
+
             GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
 
 
@@ -653,6 +665,8 @@ namespace MyGIS
 
             SetDefaultImageLayer($"{_info.Name}{_info.IdProject}");
 
+            visibleLayerNames.Add($"{_info.Name}{_info.IdProject}");
+
             await DbManager.OpenConnection();
 
             string command = "select nameTableOfLayer from project_layers where idProject = @id;";
@@ -674,6 +688,7 @@ namespace MyGIS
                     Id = nameTable+_info.IdProject,
                     Name = nameTable
                 });
+                visibleLayerNames.Add(nameTable);
             }
 
             await reader.CloseAsync();
@@ -686,6 +701,8 @@ namespace MyGIS
             }
 
             await DbManager.CloseConnection();
+
+            TextBoxForCurrentVisibleLayers.Text = string.Join(", ", visibleLayerNames.ToArray());
         }
 
         private async Task GetProjectInformation()
@@ -850,25 +867,30 @@ namespace MyGIS
             {
                 rasterLayer.IsVisible = !rasterLayer.IsVisible;
             }
-
-            string tag = (string)button.Tag;
-
-            if (tag == "Visible")
+            else
             {
-                button.Content = ImageInvisibilityLayer;
-                button.Tag = "Invisible";
+                Layer layer = Layers.First((el) => el.Id == button.Uid);
+
+                if (layer.GraphicsOverlay.IsVisible)
+                {
+                    HideGraphicOverlay(layer);
+                }
+                else
+                {
+                    ShowGraphicOverlay(layer);
+                }
             }
-            if (tag == "Invisible")
-            {
-                button.Content = ImageVisibilityLayer;
-                button.Tag = "Visible";
-            }
+
+            string row = string.Join(", ", visibleLayerNames);
+            TextBoxForCurrentVisibleLayers.Text = row;
         }
 
         private void EditLayerButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not Button button)
                 return;
+
+            
 
             Layer? editLayer = Layers.FirstOrDefault((layer) => layer.Id == button.Uid);
 
@@ -882,8 +904,30 @@ namespace MyGIS
                 return;
             }
 
+            for (int i=1; i < Layers.Count; i++)
+            {
+                HideGraphicOverlay(Layers[i]);
+            }
+            
+
             CurrentEditLayer = editLayer;
+            ShowGraphicOverlay(CurrentEditLayer);
             CurrentEditLayerTextBlock.Text = CurrentEditLayer.Name;
+
+            TextBoxForCurrentVisibleLayers.Text = CurrentEditLayer.Name;
+        }
+
+        private void ShowGraphicOverlay(Layer layer)
+        {
+            layer.GraphicsOverlay.IsVisible = true;
+
+            visibleLayerNames.Add(layer.Name);
+        }
+        private void HideGraphicOverlay(Layer layer)
+        {
+            layer.GraphicsOverlay.IsVisible = false;
+
+            visibleLayerNames.Remove(layer.Name);
         }
 
         private async Task DrawPointsBinding(ObservableCollection<PointsMapBinding>? mapBindings)

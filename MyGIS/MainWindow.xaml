@@ -444,6 +444,11 @@
 
                     <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
                         <TextBlock Width="80" Text="Видимые слои" />
+                        <TextBlock
+                            x:Name="TextBoxForCurrentVisibleLayers"
+                            Width="600"
+                            Margin="10,0,0,0"
+                            Text="" />
                     </StackPanel>
 
                 </ScrollViewer>
