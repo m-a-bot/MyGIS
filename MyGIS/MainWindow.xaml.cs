@@ -152,57 +152,39 @@ namespace MyGIS
 
         private async void MapView_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (CurrentEditLayer is null || movableGraphic is null)
+            if (CurrentEditLayer is null)
                 return;
 
             if (movableGraphic != null)
+            {
                 movableGraphic.IsSelected = false;
 
-            IDictionary<string, object?> attributes = movableGraphic.Attributes;
+                IDictionary<string, object?> attributes = movableGraphic.Attributes;
 
-            if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
-            {
-                int? indexCorner = (int?) attributes["corner"];
-                if (indexCorner is null)
-                    return;
-
-                Envelope? envelope = rasterLayer.FullExtent;
-
-                if (envelope == null)
-                    return;
-
-                MapPoint mapPoint = (MapPoint)movableGraphic.Geometry;
-
-                pointsMapBinding[indexCorner.Value].PixelX = mapPoint.X;
-                pointsMapBinding[indexCorner.Value].PixelY = mapPoint.Y;
-
-                // mapPoint.X - envelope.XMin
-                // mapPoint.Y - envelope.YMin
-
-                string value = App.Wrap(JsonSerializer.Serialize(pointsMapBinding));
-
-                await DbManager.OpenConnection();
-
-                string command = $"update project_images set PointsBinding = {value} where idProject = {_info.IdProject};";
-
-                MySqlDataReader reader = await DbManager.ExecuteCommand(command);
-
-                await reader.CloseAsync();
-
-                await DbManager.CloseConnection();
-            }
-            else
-            {
-                try
+                if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
                 {
-                    string idHeader = CurrentEditLayer.Header[0];
-                    int IdRow = (int)attributes[idHeader];
+                    int? indexCorner = (int?)attributes["corner"];
+                    if (indexCorner is null)
+                        return;
 
-                    string value = App.Wrap(movableGraphic.Geometry.ToJson() + Splitter + movableGraphic.Symbol.ToJson());
+                    Envelope? envelope = rasterLayer.FullExtent;
+
+                    if (envelope == null)
+                        return;
+
+                    MapPoint mapPoint = (MapPoint)movableGraphic.Geometry;
+
+                    pointsMapBinding[indexCorner.Value].PixelX = mapPoint.X;
+                    pointsMapBinding[indexCorner.Value].PixelY = mapPoint.Y;
+
+                    // mapPoint.X - envelope.XMin
+                    // mapPoint.Y - envelope.YMin
+
+                    string value = App.Wrap(JsonSerializer.Serialize(pointsMapBinding));
 
                     await DbManager.OpenConnection();
 
-                    string command = $"update {CurrentEditLayer.Name} set graphic = {value} where {CurrentEditLayer.Header[0]} = {IdRow};";
+                    string command = $"update project_images set PointsBinding = {value} where idProject = {_info.IdProject};";
 
                     MySqlDataReader reader = await DbManager.ExecuteCommand(command);
 
@@ -210,12 +192,32 @@ namespace MyGIS
 
                     await DbManager.CloseConnection();
                 }
-                catch { }
+                else
+                {
+                    try
+                    {
+                        string idHeader = CurrentEditLayer.Header[0];
+                        int IdRow = (int)attributes[idHeader];
+
+                        string value = App.Wrap(movableGraphic.Geometry.ToJson() + Splitter + movableGraphic.Symbol.ToJson());
+
+                        await DbManager.OpenConnection();
+
+                        string command = $"update {CurrentEditLayer.Name} set graphic = {value} where {CurrentEditLayer.Header[0]} = {IdRow};";
+
+                        MySqlDataReader reader = await DbManager.ExecuteCommand(command);
+
+                        await reader.CloseAsync();
+
+                        await DbManager.CloseConnection();
+                    }
+                    catch { }
+                }
+
+
+
+                movableGraphic = null;
             }
-
-
-
-            movableGraphic = null;
             
             GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
             GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
@@ -456,6 +458,33 @@ namespace MyGIS
 
                 DataGridOfRowEditor.ItemsSource = list;
             }
+            if (Operation == TypeOperation.Move)
+            {
+
+                if (CurrentEditLayer is null)
+                    return;
+
+                var result = await MapView.IdentifyGraphicsOverlayAsync(CurrentEditLayer.GraphicsOverlay, screenPoint, 10, false);
+
+                if (result is null || result.Graphics.Count <= 0)
+                    return;
+
+                var graphic = result.Graphics[0];
+                graphic.IsSelected = true;
+
+                movableGraphic = graphic;
+
+                LastMousePosition = MapView.ScreenToLocation(screenPoint);
+            }
+
+            if (CurrentEditLayer is null)
+                return;
+            GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
+            if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
+                return;
+
+            GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
+
 
             if (Operation == TypeOperation.Info)
             {
@@ -527,35 +556,7 @@ namespace MyGIS
                 await DbManager.CloseConnection();
             }
 
-            if (Operation == TypeOperation.Move)
-            {
-                
-                if (CurrentEditLayer is null)
-                    return;
-
-                var result = await MapView.IdentifyGraphicsOverlayAsync(CurrentEditLayer.GraphicsOverlay, screenPoint, 10, false);
-
-                if (result is null || result.Graphics.Count <= 0)
-                    return;
-
-                var graphic = result.Graphics[0];
-                graphic.IsSelected = true;
-
-                movableGraphic = graphic;
-
-                LastMousePosition = MapView.ScreenToLocation(screenPoint);
-            }
-
-            
-            if (CurrentEditLayer is null)
-                return;
-            GraphicsOverlay? drawing = graphicsOverlays["DrawingGraphicOverlay"];
-            if (CurrentEditLayer.Name == $"{_info.Name}{_info.IdProject}")
-                return;
-
-            GraphicsOverlay? editOverlay = graphicsOverlays[CurrentEditLayer.Name];
-
-
+         
             if (TypeGraphic == TypeGraphic.Rectangle)
             {
                 
@@ -570,10 +571,6 @@ namespace MyGIS
 
                     drawing.Graphics.Add(point);
                     numberOfAddedPoints++;
-                }
-                else
-                {
-                    
                 }
             }
 
